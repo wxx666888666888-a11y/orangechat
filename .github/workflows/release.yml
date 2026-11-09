@@ -40,8 +40,9 @@ jobs:
         run: |
           rm -f pnpm-workspace.yaml
           cd web-ui && pnpm install && cd ..
+          PKG=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "com.lhzkml.jasmine")
           if [ ! -f app/google-services.json ]; then
-            echo '{"project_info":{"project_number":"123456789000","project_id":"mock-project","storage_bucket":"mock-project.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789000:android:1234567890abcdef","android_client_info":{"package_name":"com.lhzkml.jasmine"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyMockKeyForBuildOnly1234567890"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > app/google-services.json
+            echo "{\"project_info\":{\"project_number\":\"123456789000\",\"project_id\":\"mock-project\",\"storage_bucket\":\"mock-project.appspot.com\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:123456789000:android:1234567890abcdef\",\"android_client_info\":{\"package_name\":\"$PKG\"}},\"oauth_client\":[],\"api_key\":[{\"current_key\":\"AIzaSyMockKeyForBuildOnly1234567890\"}],\"services\":{\"appinvite_service\":{\"other_platform_oauth_client\":[]}}}],\"configuration_version\":\"1\"}" > app/google-services.json
           fi
 
       - name: Gradle Build
