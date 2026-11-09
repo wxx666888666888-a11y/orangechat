@@ -40,6 +40,10 @@ jobs:
         run: |
           pnpm install --no-frozen-lockfile
           cd web-ui && npm install --legacy-peer-deps && cd ..
+          sed -i 's/surfaceContainer[^,]*/surface/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
+          sed -i 's/primaryFixed[^,]*/primary/g; s/onPrimaryFixed[^,]*/onPrimary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
+          sed -i 's/secondaryFixed[^,]*/secondary/g; s/onSecondaryFixed[^,]*/onSecondary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
+          sed -i 's/tertiaryFixed[^,]*/tertiary/g; s/onTertiaryFixed[^,]*/onTertiary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
           PKG=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "com.lhzkml.jasmine")
           if [ ! -f app/google-services.json ]; then
             echo "{\"project_info\":{\"project_number\":\"123456789000\",\"project_id\":\"mock-project\",\"storage_bucket\":\"mock-project.appspot.com\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:123456789000:android:1234567890abcdef\",\"android_client_info\":{\"package_name\":\"$PKG\"}},\"oauth_client\":[],\"api_key\":[{\"current_key\":\"AIzaSyMockKeyForBuildOnly1234567890\"}],\"services\":{\"appinvite_service\":{\"other_platform_oauth_client\":[]}}}],\"configuration_version\":\"1\"}" > app/google-services.json
