@@ -1,12 +1,30 @@
-﻿/*
- * 橘瓣 OrangeChat
- * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
- * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
- */
-
 package me.rerere.rikkahub.data.datastore
 
 import kotlinx.serialization.Serializable
+import kotlin.uuid.Uuid
+
+@Serializable
+enum class ScheduledTargetWindow {
+    FOLLOW_LATEST, // 跟随最新聊天窗口（上次发消息或最后停留的窗口）
+    NEW_WINDOW,    // 每次触发时新建一个对话窗口
+    FIXED_WINDOW   // 固定在指定的对话窗口中触发
+}
+
+@Serializable
+data class ScheduledTaskItem(
+    val id: String = Uuid.random().toString(),
+    val title: String = "定时主动消息",
+    val enabled: Boolean = true,
+    val hour: Int = 8,
+    val minute: Int = 0,
+    // 1=周一, 2=周二, ..., 7=周日；全选即为每天
+    val daysOfWeek: Set<Int> = setOf(1, 2, 3, 4, 5, 6, 7),
+    val targetMode: ScheduledTargetWindow = ScheduledTargetWindow.FOLLOW_LATEST,
+    val fixedConversationId: String = "",
+    val assistantId: String = "", // 空则跟随当前助手
+    // 隐形触发指令（发给AI但不在界面展示用户消息气泡，空则按默认主动关怀触发）
+    val prompt: String = "",
+)
 
 @Serializable
 data class ProactiveMessageSetting(
@@ -14,16 +32,11 @@ data class ProactiveMessageSetting(
     val minIntervalMinutes: Int = 30,
     val maxIntervalMinutes: Int = 90,
     val assistantId: String = "",
-    // 是否允许 AI 根据上下文判断后强制跳转屏幕到聊天界面
     val allowForceJump: Boolean = false,
-    val jumpIdleThresholdMinutes: Int = 120, // 用户多久没回复(分钟)才允许跳转屏幕，默认2小时
-    // 激进模式：每次手机切换应用/开屏锁屏/回桌面都触发AI思考
+    val jumpIdleThresholdMinutes: Int = 120,
     val aggressiveModeEnabled: Boolean = false,
-    // 激进模式下两次AI思考之间的最小间隔（秒），防抖+限流
     val aggressiveMinIntervalSeconds: Int = 60,
-    // 激进模式下，检测到设备事件（切应用/开关屏/回桌面）后，
-    // 等待多少秒的防抖时间才真正触发 AI 思考。原来硬编码 30 秒，现在可调节。
     val aggressiveDebounceSeconds: Int = 30,
-    // 悬浮球：主动消息到达时以 Telegram 风格悬浮球提醒，点击直接进入聊天页
     val floatingBubbleEnabled: Boolean = false,
+    val scheduledTasks: List<ScheduledTaskItem> = emptyList(),
 )
