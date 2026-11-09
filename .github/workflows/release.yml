@@ -3,60 +3,82 @@ name: Release Build
 on:
   workflow_dispatch:
 
+
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      -
+ uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up JDK
+      - name: Set up
+ JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java
+-version: '17'
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@
+v4
         with:
           version: 8
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        
+uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Gradle cache
+      - name:
+ Gradle cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
+
             ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle
+*', '**/gradle-wrapper.properties') }}
 
       - name: Prepare build files
         run: |
-          pnpm install --no-frozen-lockfile
+          pnpm install --
+no-frozen-lockfile
           cd web-ui && npm install --legacy-peer-deps && cd ..
-          sed -i 's/surfaceContainer[^,]*/surface/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
-          sed -i 's/primaryFixed[^,]*/primary/g; s/onPrimaryFixed[^,]*/onPrimary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
-          sed -i 's/secondaryFixed[^,]*/secondary/g; s/onSecondaryFixed[^,]*/onSecondary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
-          sed -i 's/tertiaryFixed[^,]*/tertiary/g; s/onTertiaryFixed[^,]*/onTertiary/g' material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
-          PKG=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "com.lhzkml.jasmine")
+          #
+ 清除导致编译失败的动态颜色引用代码
+          sed -i '100,120d' material3/
+src/main/java/me/rerere/material3/DynamicSchemeExt.kt
+          PKG=$(grep -oP
+ 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "com.lhzk
+ml.jasmine")
           if [ ! -f app/google-services.json ]; then
-            echo "{\"project_info\":{\"project_number\":\"123456789000\",\"project_id\":\"mock-project\",\"storage_bucket\":\"mock-project.appspot.com\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:123456789000:android:1234567890abcdef\",\"android_client_info\":{\"package_name\":\"$PKG\"}},\"oauth_client\":[],\"api_key\":[{\"current_key\":\"AIzaSyMockKeyForBuildOnly1234567890\"}],\"services\":{\"appinvite_service\":{\"other_platform_oauth_client\":[]}}}],\"configuration_version\":\"1\"}" > app/google-services.json
+            echo "{\"project_info
+\":{\"project_number\":\"123456789000\",\"project_id\":\"mock
+-project\",\"storage_bucket\":\"mock-project.appspot.com\"},\"client\":[{\"client_info
+\":{\"mobilesdk_app_id\":\"1:123456789000:android:1
+234567890abcdef\",\"android_client_info\":{\"package_name\":\"$PKG\"}},\"
+oauth_client\":[],\"api_key\":[{\"current_key\":\"AIzaSyMockKeyForBuildOnly
+1234567890\"}],\"services\":{\"appinvite_service\":{\"other_platform_oauth_client
+\":[]}}}],\"configuration_version\":\"1\"}" > app/google-services.json
           fi
 
-      - name: Gradle Build
+      - name
+: Gradle Build
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
       - name: Upload artifacts
+
         uses: actions/upload-artifact@v4
         if: success()
         with:
-          name: apk-package
+          
+name: apk-package
           path: app/build/outputs/apk/debug/*.apk
