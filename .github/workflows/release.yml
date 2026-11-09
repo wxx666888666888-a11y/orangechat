@@ -38,8 +38,8 @@ jobs:
 
       - name: Prepare build files
         run: |
-          rm -f pnpm-workspace.yaml pnpm-lock.yaml web-ui/pnpm-lock.yaml
-          cd web-ui && pnpm install --no-frozen-lockfile && cd ..
+          pnpm install --no-frozen-lockfile
+          cd web-ui && npm install --legacy-peer-deps && cd ..
           PKG=$(grep -oP 'applicationId\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "com.lhzkml.jasmine")
           if [ ! -f app/google-services.json ]; then
             echo "{\"project_info\":{\"project_number\":\"123456789000\",\"project_id\":\"mock-project\",\"storage_bucket\":\"mock-project.appspot.com\"},\"client\":[{\"client_info\":{\"mobilesdk_app_id\":\"1:123456789000:android:1234567890abcdef\",\"android_client_info\":{\"package_name\":\"$PKG\"}},\"oauth_client\":[],\"api_key\":[{\"current_key\":\"AIzaSyMockKeyForBuildOnly1234567890\"}],\"services\":{\"appinvite_service\":{\"other_platform_oauth_client\":[]}}}],\"configuration_version\":\"1\"}" > app/google-services.json
@@ -47,7 +47,6 @@ jobs:
 
       - name: Gradle Build
         run: |
-          export PATH="$PWD/web-ui/node_modules/.bin:$PATH"
           chmod +x gradlew
           ./gradlew assembleDebug
 
