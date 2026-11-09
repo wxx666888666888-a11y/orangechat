@@ -21,7 +21,7 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 8
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -38,6 +38,9 @@ jobs:
 
       - name: Prepare build files
         run: |
+          if [ ! -f pnpm-workspace.yaml ] || [ ! -s pnpm-workspace.yaml ]; then
+            echo -e "packages:\n  - 'web/**'\n  - '**'" > pnpm-workspace.yaml
+          fi
           if [ ! -f app/google-services.json ]; then
             echo '{"project_info":{"project_number":"123456789000","project_id":"mock-project","storage_bucket":"mock-project.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789000:android:1234567890abcdef","android_client_info":{"package_name":"com.lhzkml.jasmine"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyMockKeyForBuildOnly1234567890"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}' > app/google-services.json
           fi
