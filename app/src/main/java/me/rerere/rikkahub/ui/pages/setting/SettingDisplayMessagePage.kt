@@ -1,38 +1,11 @@
-﻿/*
- * 橘瓣 OrangeChat
- * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
- * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
- */
-
 package me.rerere.rikkahub.ui.pages.setting
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -43,6 +16,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import java.io.File
+import kotlin.math.roundToInt
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.data.datastore.ChatFontFamily
 import me.rerere.rikkahub.data.datastore.DisplaySetting
@@ -56,31 +30,23 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun SettingDisplayMessagePage(vm: SettingVM = koinViewModel()) {
     val settings by vm.settings.collectAsStateWithLifecycle()
-    var displaySetting by remember(settings) { mutableStateOf(settings.displaySetting) }
+    var ds by remember(settings) { mutableStateOf(settings.displaySetting) }
     val context = LocalContext.current
 
-    fun updateDisplaySetting(setting: DisplaySetting) {
-        displaySetting = setting
-        vm.updateSettings(settings.copy(displaySetting = setting))
+    fun update(s: DisplaySetting) {
+        ds = s
+        vm.updateSettings(settings.copy(displaySetting = s))
     }
 
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
-
     val fontDir = remember { File(context.filesDir, "custom_fonts").apply { mkdirs() } }
-    val fontPickerLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
+    val fontPickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let {
             val destFile = File(fontDir, "custom_font_${System.currentTimeMillis()}.ttf")
             context.contentResolver.openInputStream(it)?.use { input ->
                 destFile.outputStream().use { output -> input.copyTo(output) }
             }
-            updateDisplaySetting(
-                displaySetting.copy(
-                    chatFontFamily = ChatFontFamily.CUSTOM,
-                    customFontPath = destFile.absolutePath
-                )
-            )
+            update(ds.copy(chatFontFamily = ChatFontFamily.CUSTOM, customFontPath = destFile.absolutePath))
         }
     }
 
@@ -101,7 +67,6 @@ fun SettingDisplayMessagePage(vm: SettingVM = koinViewModel()) {
             contentPadding = contentPadding + PaddingValues(8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 消息显示设置
             item {
                 CardGroup(
                     modifier = Modifier.padding(horizontal = 8.dp),
@@ -110,112 +75,73 @@ fun SettingDisplayMessagePage(vm: SettingVM = koinViewModel()) {
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_user_avatar_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_user_avatar_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showUserAvatar,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showUserAvatar = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showUserAvatar, onCheckedChange = { update(ds.copy(showUserAvatar = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_assistant_bubble_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_assistant_bubble_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showAssistantBubble,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showAssistantBubble = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showAssistantBubble, onCheckedChange = { update(ds.copy(showAssistantBubble = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_chat_list_model_icon_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_chat_list_model_icon_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showModelIcon,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showModelIcon = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showModelIcon, onCheckedChange = { update(ds.copy(showModelIcon = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_model_name_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_model_name_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showModelName,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showModelName = it))
+                        trailingContent = { Switch(checked = ds.showModelName, onCheckedChange = { update(ds.copy(showModelName = it)) }) }
+                    )
+                    val shapeOptions = listOf(0 to "圆形", 1 to "方圆形", 2 to "方形")
+                    item(
+                        headlineContent = { Text("头像形状") },
+                        supportingContent = {
+                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                shapeOptions.forEachIndexed { idx, (mode, label) ->
+                                    SegmentedButton(
+                                        selected = ds.avatarShapeMode == mode,
+                                        onClick = { update(ds.copy(avatarShapeMode = mode)) },
+                                        shape = SegmentedButtonDefaults.itemShape(idx, shapeOptions.size)
+                                    ) { Text(label) }
                                 }
-                            )
-                        },
+                            }
+                        }
+                    )
+                    item(
+                        headlineContent = { Text("头像大小") },
+                        supportingContent = {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Slider(value = ds.avatarSizeDp, onValueChange = { update(ds.copy(avatarSizeDp = it)) }, valueRange = 24f..60f, modifier = Modifier.weight(1f))
+                                Text("${ds.avatarSizeDp.roundToInt()}dp")
+                            }
+                        }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_date_below_name_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_date_below_name_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showDateBelowName,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showDateBelowName = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showDateBelowName, onCheckedChange = { update(ds.copy(showDateBelowName = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_token_usage_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_token_usage_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showTokenUsage,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showTokenUsage = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showTokenUsage, onCheckedChange = { update(ds.copy(showTokenUsage = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_show_thinking_content_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_show_thinking_content_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.showThinkingContent,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(showThinkingContent = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.showThinkingContent, onCheckedChange = { update(ds.copy(showThinkingContent = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_auto_collapse_thinking_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_auto_collapse_thinking_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.autoCloseThinking,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(autoCloseThinking = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.autoCloseThinking, onCheckedChange = { update(ds.copy(autoCloseThinking = it)) }) }
                     )
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_enable_latex_rendering_title)) },
                         supportingContent = { Text(stringResource(R.string.setting_display_page_enable_latex_rendering_desc)) },
-                        trailingContent = {
-                            Switch(
-                                checked = displaySetting.enableLatexRendering,
-                                onCheckedChange = {
-                                    updateDisplaySetting(displaySetting.copy(enableLatexRendering = it))
-                                }
-                            )
-                        },
+                        trailingContent = { Switch(checked = ds.enableLatexRendering, onCheckedChange = { update(ds.copy(enableLatexRendering = it)) }) }
                     )
-                    val chatFontFamilyOptions = listOf(
+                    val fontOptions = listOf(
                         ChatFontFamily.DEFAULT to stringResource(R.string.setting_display_page_chat_font_family_default),
                         ChatFontFamily.SERIF to stringResource(R.string.setting_display_page_chat_font_family_serif),
                         ChatFontFamily.MONOSPACE to stringResource(R.string.setting_display_page_chat_font_family_monospace),
@@ -223,144 +149,84 @@ fun SettingDisplayMessagePage(vm: SettingVM = koinViewModel()) {
                     item(
                         headlineContent = { Text(stringResource(R.string.setting_display_page_chat_font_family_title)) },
                         supportingContent = {
-                            SingleChoiceSegmentedButtonRow(
-                                modifier = Modifier
-                                    .padding(top = 4.dp)
-                                    .fillMaxWidth()
-                            ) {
-                                chatFontFamilyOptions.forEachIndexed { index, (family, label) ->
+                            SingleChoiceSegmentedButtonRow(Modifier.padding(top = 4.dp).fillMaxWidth()) {
+                                fontOptions.forEachIndexed { idx, (f, label) ->
                                     SegmentedButton(
-                                        selected = displaySetting.chatFontFamily == family,
-                                        onClick = { updateDisplaySetting(displaySetting.copy(chatFontFamily = family)) },
-                                        shape = SegmentedButtonDefaults.itemShape(
-                                            index,
-                                            chatFontFamilyOptions.size
-                                        ),
-                                    ) {
-                                        Text(
-                                            text = label,
-                                            fontFamily = when (family) {
-                                                ChatFontFamily.DEFAULT -> FontFamily.Default
-                                                ChatFontFamily.SERIF -> FontFamily.Serif
-                                                ChatFontFamily.MONOSPACE -> FontFamily.Monospace
-                                                ChatFontFamily.CUSTOM -> FontFamily.Default
-                                            }
-                                        )
-                                    }
+                                        selected = ds.chatFontFamily == f,
+                                        onClick = { update(ds.copy(chatFontFamily = f)) },
+                                        shape = SegmentedButtonDefaults.itemShape(idx, fontOptions.size)
+                                    ) { Text(label) }
                                 }
                             }
                         }
                     )
                     item(
-                        headlineContent = { Text(stringResource(R.string.setting_display_page_font_size_title)) },
+                        headlineContent = { Text("消息字体大小（支持1%微调）") },
                         supportingContent = {
                             Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                ) {
+                                val pct = (ds.fontSizeRatio * 100).roundToInt()
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    TextButton(onClick = { update(ds.copy(fontSizeRatio = ((pct - 1).coerceIn(50, 200)) / 100f)) }) { Text("-1%") }
                                     Slider(
-                                        value = displaySetting.fontSizeRatio,
-                                        onValueChange = {
-                                            updateDisplaySetting(displaySetting.copy(fontSizeRatio = it))
-                                        },
+                                        value = ds.fontSizeRatio,
+                                        onValueChange = { update(ds.copy(fontSizeRatio = (it * 100).roundToInt() / 100f)) },
                                         valueRange = 0.5f..2f,
-                                        steps = 11,
+                                        steps = 0,
                                         modifier = Modifier.weight(1f)
                                     )
-                                    Text(text = "${(displaySetting.fontSizeRatio * 100).toInt()}%")
+                                    TextButton(onClick = { update(ds.copy(fontSizeRatio = ((pct + 1).coerceIn(50, 200)) / 100f)) }) { Text("+1%") }
+                                    Text("$pct%")
                                 }
                                 MarkdownBlock(
                                     content = stringResource(R.string.setting_display_page_font_size_preview),
                                     style = LocalTextStyle.current.copy(
-                                        fontSize = LocalTextStyle.current.fontSize * displaySetting.fontSizeRatio,
-                                        lineHeight = LocalTextStyle.current.lineHeight * displaySetting.fontSizeRatio,
-                                        fontFamily = when (displaySetting.chatFontFamily) {
-                                            ChatFontFamily.DEFAULT -> FontFamily.Default
-                                            ChatFontFamily.SERIF -> FontFamily.Serif
-                                            ChatFontFamily.MONOSPACE -> FontFamily.Monospace
-                                            ChatFontFamily.CUSTOM -> FontFamily.Default
-                                        }
+                                        fontSize = LocalTextStyle.current.fontSize * ds.fontSizeRatio,
+                                        lineHeight = LocalTextStyle.current.lineHeight * ds.fontSizeRatio
                                     )
                                 )
                             }
                         }
                     )
                     item(
-                        headlineContent = { Text("思维链字体大小") },
+                        headlineContent = { Text("思维链字体大小（支持1%微调）") },
                         supportingContent = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
+                            val pct = (ds.thinkingFontSizeRatio * 100).roundToInt()
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { update(ds.copy(thinkingFontSizeRatio = ((pct - 1).coerceIn(50, 200)) / 100f)) }) { Text("-1%") }
                                 Slider(
-                                    value = displaySetting.thinkingFontSizeRatio,
-                                    onValueChange = {
-                                        updateDisplaySetting(displaySetting.copy(thinkingFontSizeRatio = it))
-                                    },
+                                    value = ds.thinkingFontSizeRatio,
+                                    onValueChange = { update(ds.copy(thinkingFontSizeRatio = (it * 100).roundToInt() / 100f)) },
                                     valueRange = 0.5f..2.0f,
-                                    steps = 5,
+                                    steps = 0,
                                     modifier = Modifier.weight(1f)
                                 )
-                                Text(text = "${(displaySetting.thinkingFontSizeRatio * 100).toInt()}%")
+                                TextButton(onClick = { update(ds.copy(thinkingFontSizeRatio = ((pct + 1).coerceIn(50, 200)) / 100f)) }) { Text("+1%") }
+                                Text("$pct%")
                             }
                         }
                     )
                 }
             }
 
-            // 自定义字体
             item {
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text("自定义字体") },
-                ) {
+                CardGroup(modifier = Modifier.padding(horizontal = 8.dp), title = { Text("自定义字体") }) {
                     item(
                         headlineContent = { Text("导入自定义字体") },
                         supportingContent = {
-                            Text(
-                                if (displaySetting.customFontPath.isNotBlank() && File(displaySetting.customFontPath).exists())
-                                    "当前字体: ${File(displaySetting.customFontPath).name}"
-                                else "支持 .ttf / .otf 字体文件"
-                            )
+                            Text(if (ds.customFontPath.isNotBlank() && File(ds.customFontPath).exists()) "当前: ${File(ds.customFontPath).name}" else "支持 .ttf / .otf")
                         },
                         trailingContent = {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                if (displaySetting.customFontPath.isNotBlank()) {
+                                if (ds.customFontPath.isNotBlank()) {
                                     TextButton(onClick = {
-                                        File(displaySetting.customFontPath).delete()
-                                        updateDisplaySetting(
-                                            displaySetting.copy(
-                                                customFontPath = "",
-                                                chatFontFamily = ChatFontFamily.DEFAULT
-                                            )
-                                        )
+                                        File(ds.customFontPath).delete()
+                                        update(ds.copy(customFontPath = "", chatFontFamily = ChatFontFamily.DEFAULT))
                                     }) { Text("清除") }
                                 }
-                                TextButton(onClick = {
-                                    fontPickerLauncher.launch(arrayOf("*/*"))
-                                }) { Text("选择字体") }
+                                TextButton(onClick = { fontPickerLauncher.launch(arrayOf("*/*")) }) { Text("选择字体") }
                             }
-                        },
+                        }
                     )
-                    if (displaySetting.customFontPath.isNotBlank() && File(displaySetting.customFontPath).exists()) {
-                        item(
-                            headlineContent = { Text("字体预览") },
-                            supportingContent = {
-                                val customFont = remember(displaySetting.customFontPath) {
-                                    runCatching { FontFamily(Font(File(displaySetting.customFontPath))) }
-                                        .getOrDefault(FontFamily.Default)
-                                }
-                                Text(
-                                    text = "The quick brown fox jumps over the lazy dog. 你好世界！1234567890",
-                                    fontFamily = customFont,
-                                    style = MaterialTheme.typography.bodyLarge
-                                )
-                            }
-                        )
-                    }
                 }
             }
         }
