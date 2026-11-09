@@ -1,37 +1,11 @@
-﻿/*
- * 橘瓣 OrangeChat
- * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
- * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
- */
-
 package me.rerere.rikkahub.ui.pages.assistant.detail
- 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -59,29 +33,21 @@ import org.koin.core.parameter.parametersOf
 import kotlin.math.roundToInt
 import kotlin.uuid.Uuid
 import me.rerere.rikkahub.data.model.Tag as DataTag
- 
+
 @Composable
 fun AssistantBasicPage(id: String) {
-    val vm: AssistantDetailVM = koinViewModel(
-        parameters = {
-            parametersOf(id)
-        }
-    )
+    val vm: AssistantDetailVM = koinViewModel(parameters = { parametersOf(id) })
     val assistant by vm.assistant.collectAsStateWithLifecycle()
     val providers by vm.providers.collectAsStateWithLifecycle()
     val tags by vm.tags.collectAsStateWithLifecycle()
     val workspaces by vm.workspaces.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
- 
+
     Scaffold(
         topBar = {
             LargeFlexibleTopAppBar(
-                title = {
-                    Text(stringResource(R.string.assistant_page_tab_basic))
-                },
-                navigationIcon = {
-                    BackButton()
-                },
+                title = { Text(stringResource(R.string.assistant_page_tab_basic)) },
+                navigationIcon = { BackButton() },
                 scrollBehavior = scrollBehavior,
                 colors = CustomColors.topBarColors,
             )
@@ -100,7 +66,7 @@ fun AssistantBasicPage(id: String) {
         )
     }
 }
- 
+
 @Composable
 internal fun AssistantBasicContent(
     modifier: Modifier = Modifier,
@@ -112,337 +78,174 @@ internal fun AssistantBasicContent(
     vm: AssistantDetailVM
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState())
-            .imePadding(),
+        modifier = modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()).imePadding(),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             UIAvatar(
                 value = assistant.avatar,
                 name = assistant.name.ifBlank { stringResource(R.string.assistant_page_default_assistant) },
-                onUpdate = { avatar ->
-                    onUpdate(
-                        assistant.copy(
-                            avatar = avatar
-                        )
-                    )
-                },
-                modifier = Modifier
-                    .size(80.dp)
-                    .heroAnimation("assistant_${assistant.id}")
+                onUpdate = { onUpdate(assistant.copy(avatar = it)) },
+                modifier = Modifier.size(80.dp).heroAnimation("assistant_${assistant.id}")
             )
         }
- 
-        Card(
-            colors = CustomColors.cardColorsOnSurfaceContainer
-        ) {
-            FormItem(
-                label = {
-                    Text(stringResource(R.string.assistant_page_name))
-                },
-                modifier = Modifier.padding(8.dp),
- 
-            ) {
+
+        Card(colors = CustomColors.cardColorsOnSurfaceContainer) {
+            FormItem(label = { Text(stringResource(R.string.assistant_page_name)) }, modifier = Modifier.padding(8.dp)) {
                 OutlinedTextField(
                     value = assistant.name,
-                    onValueChange = {
-                        onUpdate(
-                            assistant.copy(
-                                name = it
-                            )
-                        )
-                    },
+                    onValueChange = { onUpdate(assistant.copy(name = it)) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
- 
             HorizontalDivider()
- 
-            FormItem(
-                label = {
-                    Text(stringResource(R.string.assistant_page_tags))
-                },
-                modifier = Modifier.padding(8.dp),
-            ) {
-                TagsInput(
-                    value = assistant.tags,
-                    tags = tags,
-                    onValueChange = { tagIds, tagList ->
-                        vm.updateTags(tagIds, tagList)
-                    },
-                )
+            FormItem(label = { Text(stringResource(R.string.assistant_page_tags)) }, modifier = Modifier.padding(8.dp)) {
+                TagsInput(value = assistant.tags, tags = tags, onValueChange = { ids, list -> vm.updateTags(ids, list) })
             }
- 
             HorizontalDivider()
- 
             FormItem(
-                label = {
-                    Text(stringResource(R.string.assistant_page_workspace_binding))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_workspace_binding_desc))
-                },
+                label = { Text(stringResource(R.string.assistant_page_workspace_binding)) },
+                description = { Text(stringResource(R.string.assistant_page_workspace_binding_desc)) },
                 modifier = Modifier.padding(8.dp),
             ) {
                 val options = remember(workspaces) { listOf<WorkspaceEntity?>(null) + workspaces }
                 Select(
                     options = options,
                     selectedOption = workspaces.find { it.id == assistant.workspaceId?.toString() },
-                    onOptionSelected = { selected ->
-                        onUpdate(
-                            assistant.copy(
-                                workspaceId = selected?.id?.let { Uuid.parse(it) }
-                            )
-                        )
-                    },
+                    onOptionSelected = { sel -> onUpdate(assistant.copy(workspaceId = sel?.id?.let { Uuid.parse(it) })) },
                     optionToString = { it?.name ?: stringResource(R.string.workspace_no_binding) },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
- 
             HorizontalDivider()
- 
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_use_assistant_avatar))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_use_assistant_avatar_desc))
-                },
+                label = { Text("使用助手头像") },
+                description = { Text("开启后聊天消息使用助手自定义头像（与名字开关独立）") },
                 tail = {
-                    Switch(
-                        checked = assistant.useAssistantAvatar,
-                        onCheckedChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    useAssistantAvatar = it
-                                )
-                            )
-                        }
-                    )
+                    Switch(checked = assistant.useAssistantAvatar, onCheckedChange = { onUpdate(assistant.copy(useAssistantAvatar = it)) })
                 }
             )
- 
             HorizontalDivider()
- 
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_split_bubble_by_line_title))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_split_bubble_by_line_desc))
-                },
+                label = { Text("使用助手名字") },
+                description = { Text("开启后聊天消息显示助手名字；关闭则显示模型原名（与头像开关独立）") },
                 tail = {
-                    Switch(
-                        checked = assistant.splitBubbleByLine,
-                        onCheckedChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    splitBubbleByLine = it
-                                )
-                            )
-                        }
-                    )
+                    Switch(checked = assistant.useAssistantName, onCheckedChange = { onUpdate(assistant.copy(useAssistantName = it)) })
                 }
             )
-
+            HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_split_user_bubble_by_line_title))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_split_user_bubble_by_line_desc))
-                },
+                label = { Text(stringResource(R.string.assistant_page_split_bubble_by_line_title)) },
+                description = { Text(stringResource(R.string.assistant_page_split_bubble_by_line_desc)) },
                 tail = {
-                    Switch(
-                        checked = assistant.splitUserBubbleByLine,
-                        onCheckedChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    splitUserBubbleByLine = it
-                                )
-                            )
-                        }
-                    )
+                    Switch(checked = assistant.splitBubbleByLine, onCheckedChange = { onUpdate(assistant.copy(splitBubbleByLine = it)) })
+                }
+            )
+            FormItem(
+                modifier = Modifier.padding(8.dp),
+                label = { Text(stringResource(R.string.assistant_page_split_user_bubble_by_line_title)) },
+                description = { Text(stringResource(R.string.assistant_page_split_user_bubble_by_line_desc)) },
+                tail = {
+                    Switch(checked = assistant.splitUserBubbleByLine, onCheckedChange = { onUpdate(assistant.copy(splitUserBubbleByLine = it)) })
                 }
             )
         }
- 
-        Card(
-            colors = CustomColors.cardColorsOnSurfaceContainer
-        ) {
+
+        Card(colors = CustomColors.cardColorsOnSurfaceContainer) {
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_chat_model))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_chat_model_desc))
-                },
+                label = { Text(stringResource(R.string.assistant_page_chat_model)) },
+                description = { Text(stringResource(R.string.assistant_page_chat_model_desc)) },
                 content = {
                     ModelSelector(
                         modelId = assistant.chatModelId,
                         providers = providers,
                         type = ModelType.CHAT,
-                        onSelect = {
-                            onUpdate(
-                                assistant.copy(
-                                    chatModelId = it.id
-                                )
-                            )
-                        },
+                        onSelect = { onUpdate(assistant.copy(chatModelId = it.id)) },
                     )
                 }
             )
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_temperature))
-                },
-                description = {
-                    Text(
-                        text = buildAnnotatedString {
-                            append(stringResource(R.string.assistant_page_temperature_warning))
-                        }
-                    )
-                },
+                label = { Text(stringResource(R.string.assistant_page_temperature)) },
+                description = { Text(buildAnnotatedString { append(stringResource(R.string.assistant_page_temperature_warning)) }) },
                 tail = {
                     Switch(
                         checked = assistant.temperature != null,
-                        onCheckedChange = { enabled ->
-                            onUpdate(
-                                assistant.copy(
-                                    temperature = if (enabled) 1.0f else null
-                                )
-                            )
-                        }
+                        onCheckedChange = { onUpdate(assistant.copy(temperature = if (it) 1.0f else null)) }
                     )
                 }
             ) {
                 if (assistant.temperature != null) {
-                    var temperatureInput by remember(assistant.id) {
-                        mutableStateOf(assistant.temperature.toString())
-                    }
-                    val temperatureValue = temperatureInput.toFloatOrNull()
+                    var input by remember(assistant.id) { mutableStateOf(assistant.temperature.toString()) }
+                    val v = input.toFloatOrNull()
                     OutlinedTextField(
-                        value = temperatureInput,
-                        onValueChange = { value ->
-                            temperatureInput = value
-                            value.toFloatOrNull()?.takeIf { it in 0f..2f }?.let { temperature ->
-                                onUpdate(
-                                    assistant.copy(
-                                        temperature = temperature
-                                    )
-                                )
-                            }
+                        value = input,
+                        onValueChange = { s ->
+                            input = s
+                            s.toFloatOrNull()?.takeIf { it in 0f..2f }?.let { onUpdate(assistant.copy(temperature = it)) }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        isError = temperatureValue == null || temperatureValue !in 0f..2f,
-                        supportingText = {
-                            Text("0 - 2")
-                        }
+                        isError = v == null || v !in 0f..2f,
+                        supportingText = { Text("0 - 2") }
                     )
                 }
             }
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_top_p))
-                },
-                description = {
-                    Text(
-                        text = buildAnnotatedString {
-                            append(stringResource(R.string.assistant_page_top_p_warning))
-                        }
-                    )
-                },
+                label = { Text(stringResource(R.string.assistant_page_top_p)) },
+                description = { Text(buildAnnotatedString { append(stringResource(R.string.assistant_page_top_p_warning)) }) },
                 tail = {
                     Switch(
                         checked = assistant.topP != null,
-                        onCheckedChange = { enabled ->
-                            onUpdate(
-                                assistant.copy(
-                                    topP = if (enabled) 1.0f else null
-                                )
-                            )
-                        }
+                        onCheckedChange = { onUpdate(assistant.copy(topP = if (it) 1.0f else null)) }
                     )
                 }
             ) {
                 assistant.topP?.let { topP ->
-                    var topPInput by remember(assistant.id) {
-                        mutableStateOf(topP.toString())
-                    }
-                    val topPValue = topPInput.toFloatOrNull()
+                    var input by remember(assistant.id) { mutableStateOf(topP.toString()) }
+                    val v = input.toFloatOrNull()
                     OutlinedTextField(
-                        value = topPInput,
-                        onValueChange = { value ->
-                            topPInput = value
-                            value.toFloatOrNull()?.takeIf { it in 0f..1f }?.let { nextTopP ->
-                                onUpdate(
-                                    assistant.copy(
-                                        topP = nextTopP
-                                    )
-                                )
-                            }
+                        value = input,
+                        onValueChange = { s ->
+                            input = s
+                            s.toFloatOrNull()?.takeIf { it in 0f..1f }?.let { onUpdate(assistant.copy(topP = it)) }
                         },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
-                        isError = topPValue == null || topPValue !in 0f..1f,
-                        supportingText = {
-                            Text("0 - 1")
-                        }
+                        isError = v == null || v !in 0f..1f,
+                        supportingText = { Text("0 - 1") }
                     )
                 }
             }
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_context_message_size))
-                },
-                description = {
-                    Text(
-                        text = stringResource(R.string.assistant_page_context_message_desc),
-                    )
-                }
+                label = { Text(stringResource(R.string.assistant_page_context_message_size)) },
+                description = { Text(stringResource(R.string.assistant_page_context_message_desc)) }
             ) {
                 Slider(
                     value = assistant.contextMessageSize.toFloat(),
-                    onValueChange = {
-                        onUpdate(
-                            assistant.copy(
-                                contextMessageSize = it.roundToInt()
-                            )
-                        )
-                    },
+                    onValueChange = { onUpdate(assistant.copy(contextMessageSize = it.roundToInt())) },
                     valueRange = 0f..512f,
                     steps = 0,
                     modifier = Modifier.fillMaxWidth()
                 )
- 
                 Text(
-                    text = if (assistant.contextMessageSize > 0) stringResource(
-                        R.string.assistant_page_context_message_count,
-                        assistant.contextMessageSize
-                    ) else stringResource(R.string.assistant_page_context_message_unlimited),
+                    text = if (assistant.contextMessageSize > 0) stringResource(R.string.assistant_page_context_message_count, assistant.contextMessageSize)
+                    else stringResource(R.string.assistant_page_context_message_unlimited),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
                 )
@@ -450,124 +253,56 @@ internal fun AssistantBasicContent(
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_stream_output))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_stream_output_desc))
-                },
-                tail = {
-                    Switch(
-                        checked = assistant.streamOutput,
-                        onCheckedChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    streamOutput = it
-                                )
-                            )
-                        }
-                    )
-                }
+                label = { Text(stringResource(R.string.assistant_page_stream_output)) },
+                description = { Text(stringResource(R.string.assistant_page_stream_output_desc)) },
+                tail = { Switch(checked = assistant.streamOutput, onCheckedChange = { onUpdate(assistant.copy(streamOutput = it)) }) }
             )
             HorizontalDivider()
-            FormItem(
-                modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_thinking_budget))
-                },
-            ) {
-                ReasoningButton(
-                    reasoningLevel = assistant.reasoningLevel,
-                    onUpdateReasoningLevel = { level ->
-                        onUpdate(assistant.copy(reasoningLevel = level))
-                    }
-                )
+            FormItem(modifier = Modifier.padding(8.dp), label = { Text(stringResource(R.string.assistant_page_thinking_budget)) }) {
+                ReasoningButton(reasoningLevel = assistant.reasoningLevel, onUpdateReasoningLevel = { onUpdate(assistant.copy(reasoningLevel = it)) })
             }
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = {
-                    Text(stringResource(R.string.assistant_page_max_tokens))
-                },
-                description = {
-                    Text(stringResource(R.string.assistant_page_max_tokens_desc))
-                }
+                label = { Text(stringResource(R.string.assistant_page_max_tokens)) },
+                description = { Text(stringResource(R.string.assistant_page_max_tokens_desc)) }
             ) {
                 OutlinedTextField(
                     value = assistant.maxTokens?.toString() ?: "",
-                    onValueChange = { text ->
-                        val tokens = if (text.isBlank()) {
-                            null
-                        } else {
-                            text.toIntOrNull()?.takeIf { it > 0 }
-                        }
-                        onUpdate(
-                            assistant.copy(
-                                maxTokens = tokens
-                            )
-                        )
+                    onValueChange = { t ->
+                        val tokens = if (t.isBlank()) null else t.toIntOrNull()?.takeIf { it > 0 }
+                        onUpdate(assistant.copy(maxTokens = tokens))
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = {
-                        Text(stringResource(R.string.assistant_page_max_tokens_no_limit))
-                    },
-                    supportingText = {
-                        if (assistant.maxTokens != null) {
-                            Text(stringResource(R.string.assistant_page_max_tokens_limit, assistant.maxTokens))
-                        } else {
-                            Text(stringResource(R.string.assistant_page_max_tokens_no_token_limit))
-                        }
-                    }
+                    placeholder = { Text(stringResource(R.string.assistant_page_max_tokens_no_limit)) }
                 )
             }
         }
- 
-        Card(
-            colors = CustomColors.cardColorsOnSurfaceContainer
-        ) {
+
+        Card(colors = CustomColors.cardColorsOnSurfaceContainer) {
             BackgroundPicker(
                 modifier = Modifier.padding(8.dp),
                 background = assistant.background,
                 backgroundOpacity = assistant.backgroundOpacity,
-                onUpdate = { background ->
-                    onUpdate(
-                        assistant.copy(
-                            background = background
-                        )
-                    )
-                }
+                onUpdate = { onUpdate(assistant.copy(background = it)) }
             )
- 
             if (assistant.background != null) {
-                val backgroundOpacity = assistant.backgroundOpacity.coerceIn(0f, 1f)
+                val op = assistant.backgroundOpacity.coerceIn(0f, 1f)
                 HorizontalDivider()
                 FormItem(
                     modifier = Modifier.padding(8.dp),
-                    label = {
-                        Text(stringResource(R.string.assistant_page_background_opacity))
-                    },
-                    description = {
-                        Text(stringResource(R.string.assistant_page_background_opacity_desc))
-                    }
+                    label = { Text(stringResource(R.string.assistant_page_background_opacity)) },
+                    description = { Text(stringResource(R.string.assistant_page_background_opacity_desc)) }
                 ) {
                     Slider(
-                        value = backgroundOpacity,
-                        onValueChange = {
-                            onUpdate(
-                                assistant.copy(
-                                    backgroundOpacity = it.toFixed(2).toFloatOrNull()?.coerceIn(0f, 1f) ?: 1.0f
-                                )
-                            )
-                        },
+                        value = op,
+                        onValueChange = { onUpdate(assistant.copy(backgroundOpacity = it.toFixed(2).toFloatOrNull()?.coerceIn(0f, 1f) ?: 1.0f)) },
                         valueRange = 0f..1f,
-                        steps = 19,
+                        steps = 0,
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
-                        text = stringResource(
-                            R.string.assistant_page_background_opacity_value,
-                            (backgroundOpacity * 100).roundToInt()
-                        ),
+                        text = stringResource(R.string.assistant_page_background_opacity_value, (op * 100).roundToInt()),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.75f),
                     )
@@ -576,4 +311,3 @@ internal fun AssistantBasicContent(
         }
     }
 }
- 
