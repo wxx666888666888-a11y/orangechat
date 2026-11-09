@@ -34,6 +34,7 @@ jobs:
 
       - name: Prepare
         run: |
+          chmod +x gradlew
           pnpm install --no-frozen-lockfile || true
           cd web-ui && npm install --legacy-peer-deps && cd ..
           grep -v -E "surfaceContainer|Fixed" material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt > temp.kt
@@ -58,7 +59,7 @@ jobs:
                   {
                     "current_key": "mock-api-key-123456789"
                   }
-                ],
+                },
                 "services": {
                   "appinvite_service": {
                     "other_platform_oauth_client": []
