@@ -1,28 +1,9 @@
-﻿/*
- * 橘瓣 OrangeChat
- * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
- * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
- */
-
 package me.rerere.rikkahub.ui.pages.setting
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.LargeFlexibleTopAppBar
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
@@ -34,23 +15,22 @@ import me.rerere.rikkahub.ui.components.ui.CardGroup
 import me.rerere.rikkahub.ui.theme.CustomColors
 import me.rerere.rikkahub.utils.plus
 import org.koin.androidx.compose.koinViewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun SettingDisplayTransparencyPage(vm: SettingVM = koinViewModel()) {
     val settings by vm.settings.collectAsStateWithLifecycle()
-    var displaySetting by remember(settings) { mutableStateOf(settings.displaySetting) }
-
-    fun updateDisplaySetting(setting: DisplaySetting) {
-        displaySetting = setting
-        vm.updateSettings(settings.copy(displaySetting = setting))
+    var ds by remember(settings) { mutableStateOf(settings.displaySetting) }
+    fun update(s: DisplaySetting) {
+        ds = s
+        vm.updateSettings(settings.copy(displaySetting = s))
     }
-
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
         topBar = {
             LargeFlexibleTopAppBar(
-                title = { Text("透明度设置") },
+                title = { Text("透明度与毛玻璃美化") },
                 navigationIcon = { BackButton() },
                 scrollBehavior = scrollBehavior,
                 colors = CustomColors.topBarColors
@@ -67,71 +47,94 @@ fun SettingDisplayTransparencyPage(vm: SettingVM = koinViewModel()) {
             item {
                 CardGroup(
                     modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text("透明度设置") },
+                    title = { Text("橘瓣原版透明度（完全保留）") },
                 ) {
                     item(
                         headlineContent = { Text("聊天气泡透明度") },
                         supportingContent = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Slider(
-                                    value = displaySetting.chatBubbleTransparency,
-                                    onValueChange = {
-                                        updateDisplaySetting(displaySetting.copy(chatBubbleTransparency = it))
-                                    },
-                                    valueRange = 0f..100f,
-                                    steps = 19,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(text = "${displaySetting.chatBubbleTransparency.toInt()}%")
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Slider(value = ds.chatBubbleTransparency, onValueChange = { update(ds.copy(chatBubbleTransparency = it)) }, valueRange = 0f..100f, modifier = Modifier.weight(1f))
+                                Text("${ds.chatBubbleTransparency.roundToInt()}%")
                             }
                         }
                     )
                     item(
                         headlineContent = { Text("思维链透明度") },
                         supportingContent = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Slider(
-                                    value = displaySetting.thinkingChainTransparency,
-                                    onValueChange = {
-                                        updateDisplaySetting(displaySetting.copy(thinkingChainTransparency = it))
-                                    },
-                                    valueRange = 0f..100f,
-                                    steps = 19,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(text = "${displaySetting.thinkingChainTransparency.toInt()}%")
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Slider(value = ds.thinkingChainTransparency, onValueChange = { update(ds.copy(thinkingChainTransparency = it)) }, valueRange = 0f..100f, modifier = Modifier.weight(1f))
+                                Text("${ds.thinkingChainTransparency.roundToInt()}%")
                             }
                         }
                     )
                     item(
                         headlineContent = { Text("侧边栏元素透明度") },
                         supportingContent = {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                Slider(
-                                    value = displaySetting.drawerItemAlpha,
-                                    onValueChange = {
-                                        updateDisplaySetting(displaySetting.copy(drawerItemAlpha = it))
-                                    },
-                                    valueRange = 0f..1f,
-                                    steps = 19,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(text = "${(displaySetting.drawerItemAlpha * 100).toInt()}%")
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Slider(value = ds.drawerItemAlpha, onValueChange = { update(ds.copy(drawerItemAlpha = it)) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+                                Text("${(ds.drawerItemAlpha * 100).roundToInt()}%")
                             }
                         }
                     )
+                }
+            }
+
+            item {
+                CardGroup(
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                    title = { Text("多形态毛玻璃美化（KE / 北极星切换）") },
+                ) {
+                    val modes = listOf(0 to "橘瓣原版", 1 to "KE清透毛玻璃", 2 to "北极星柔光磨砂")
+                    item(
+                        headlineContent = { Text("聊天气泡美化形态") },
+                        supportingContent = {
+                            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                modes.forEachIndexed { i, (mode, label) ->
+                                    SegmentedButton(
+                                        selected = ds.bubbleGlassStyle == mode,
+                                        onClick = { update(ds.copy(bubbleGlassStyle = mode)) },
+                                        shape = SegmentedButtonDefaults.itemShape(i, modes.size)
+                                    ) { Text(label) }
+                                }
+                            }
+                        }
+                    )
+                    item(
+                        headlineContent = { Text("底部输入框与面板毛玻璃模糊") },
+                        supportingContent = { Text("开启后底部输入栏与加号面板呈现高斯毛玻璃效果") },
+                        trailingContent = {
+                            Switch(checked = ds.enableBlurEffect, onCheckedChange = { update(ds.copy(enableBlurEffect = it)) })
+                        }
+                    )
+                    if (ds.bubbleGlassStyle != 0) {
+                        item(
+                            headlineContent = { Text("气泡毛玻璃模糊强度") },
+                            supportingContent = {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Slider(value = ds.bubbleBlurRadius, onValueChange = { update(ds.copy(bubbleBlurRadius = it)) }, valueRange = 2f..40f, modifier = Modifier.weight(1f))
+                                    Text("${ds.bubbleBlurRadius.roundToInt()}dp")
+                                }
+                            }
+                        )
+                        item(
+                            headlineContent = { Text("气泡高光边框粗细") },
+                            supportingContent = {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Slider(value = ds.bubbleBorderWidth, onValueChange = { update(ds.copy(bubbleBorderWidth = it)) }, valueRange = 0f..2.5f, modifier = Modifier.weight(1f))
+                                    Text("${String.format("%.1f", ds.bubbleBorderWidth)}dp")
+                                }
+                            }
+                        )
+                        item(
+                            headlineContent = { Text("气泡边框不透明度") },
+                            supportingContent = {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Slider(value = ds.bubbleBorderAlpha, onValueChange = { update(ds.copy(bubbleBorderAlpha = it)) }, valueRange = 0f..1f, modifier = Modifier.weight(1f))
+                                    Text("${(ds.bubbleBorderAlpha * 100).roundToInt()}%")
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
