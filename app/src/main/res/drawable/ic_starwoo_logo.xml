@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 柔和浅米奶白背景 -->
+    <path
+        android:fillColor="#FFFDF6EC"
+        android:pathData="M0,0h108v108h-108z" />
+
+    <!-- 中心极淡暖杏色柔光圆晕，衬托曲奇和团子 -->
+    <path
+        android:fillColor="#FFF7EADF"
+        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
+
+    <!-- 左上偏中：淡焦糖曲奇 🍪（比团子略大一点，微倾） -->
+    <path
+        android:fillColor="#FFE5C19A"
+        android:pathData="M43,43m-16.5,0a16.5,16.5 0,1 1,33 0a16.5,16.5 0,1 1,-33 0" />
+    <!-- 曲奇柔和内圈高光 -->
+    <path
+        android:fillColor="#FFECD0AF"
+        android:pathData="M41.5,41.5m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0" />
+    <!-- 曲奇上的小巧克力豆 -->
+    <path
+        android:fillColor="#FF9E7656"
+        android:pathData="M37,36m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+    <path
+        android:fillColor="#FF8C6548"
+        android:pathData="M47.5,35.5m-1.8,0a1.8,1.8 0,1 1,3.6 0a1.8,1.8 0,1 1,-3.6 0" />
+    <path
+        android:fillColor="#FF9E7656"
+        android:pathData="M42,45.5m-2.3,0a2.3,2.3 0,1 1,4.6 0a2.3,2.3 0,1 1,-4.6 0" />
+    <path
+        android:fillColor="#FF8C6548"
+        android:pathData="M34.5,46m-1.6,0a1.6,1.6 0,1 1,3.2 0a1.6,1.6 0,1 1,-3.2 0" />
+    <path
+        android:fillColor="#FF9E7656"
+        android:pathData="M50,44m-1.9,0a1.9,1.9 0,1 1,3.8 0a1.9,1.9 0,1 1,-3.8 0" />
+
+    <!-- 右下斜放：三色团子 🍡 的竹签（左上往右下斜45度） -->
+    <path
+        android:strokeColor="#FFD2B48C"
+        android:strokeWidth="2.4"
+        android:strokeLineCap="round"
+        android:pathData="M51,51 L78,78" />
+
+    <!-- 第三颗团子（右下：淡抹茶绿） -->
+    <path
+        android:fillColor="#FFCFE3C8"
+        android:pathData="M70.5,70.5m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+
+    <!-- 第二颗团子（中间：奶糯白） -->
+    <path
+        android:fillColor="#FFFFFBF5"
+        android:pathData="M63,63m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+
+    <!-- 第一颗团子（左上靠曲奇：淡樱花粉） -->
+    <path
+        android:fillColor="#FFF7CFD6"
+        android:pathData="M55.5,55.5m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+</vector>
