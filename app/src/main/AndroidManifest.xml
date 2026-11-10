@@ -68,8 +68,9 @@
     android:dataExtractionRules="@xml/data_extraction_rules"
     android:enableOnBackInvokedCallback="true"
     android:fullBackupContent="@xml/backup_rules"
-    android:icon="@mipmap/ic_launcher"
-    android:label="@string/app_name"
+    android:icon="@drawable/ic_starwoo_logo"
+    android:roundIcon="@drawable/ic_starwoo_logo"
+    android:label="Starwoo"
     android:supportsRtl="true"
     android:theme="@style/Theme.Rikkahub"
     android:usesCleartextTraffic="true"
@@ -102,6 +103,7 @@
       android:importantForAutofill="noExcludeDescendants"
       android:showWhenLocked="true"
       android:turnScreenOn="true"
+      android:label="Starwoo"
       android:theme="@style/Theme.Rikkahub"
       android:windowSoftInputMode="adjustResize">
       <intent-filter>
@@ -119,7 +121,7 @@
       <intent-filter>
         <action android:name="android.intent.action.PROCESS_TEXT" />
 
-        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.action.DEFAULT" />
 
         <data android:mimeType="text/plain" />
       </intent-filter>
@@ -301,7 +303,7 @@
       android:name=".service.RikkaAccessibilityService"
       android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
       android:exported="true"
-      android:label="@string/app_name">
+      android:label="Starwoo">
       <intent-filter>
         <action android:name="android.accessibilityservice.AccessibilityService" />
       </intent-filter>
