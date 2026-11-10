@@ -43,6 +43,10 @@ import androidx.core.content.FileProvider
 import androidx.core.net.toFile
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
+import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.debounce
@@ -74,6 +78,7 @@ import me.rerere.rikkahub.ui.components.ui.ChainOfThought
 import me.rerere.rikkahub.ui.components.ui.Favicon
 import me.rerere.rikkahub.ui.components.ui.toComposeColor
 import me.rerere.rikkahub.ui.context.LocalDisplaySettings
+import me.rerere.rikkahub.ui.context.LocalHazeState
 import me.rerere.rikkahub.ui.context.LocalNavController
 import me.rerere.rikkahub.ui.modifier.shimmer
 import me.rerere.rikkahub.ui.theme.extendColors
@@ -110,71 +115,96 @@ fun ChatMessage(
 ) {
     val message = node.messages[node.selectIndex]
     val settings = LocalDisplaySettings.current
-    val textStyle = LocalTextStyle.current.copy(
-        fontSize = LocalTextStyle.current.fontSize * settings.fontSizeRatio,
-        color = settings.chatTextColor?.let { it.toComposeColor() } ?: Color.Unspecified,
-        lineHeight = LocalTextStyle.current.lineHeight * settings.fontSizeRatio,
-        fontFamily = when (settings.chatFontFamily) {
+    val resolvedFontFamily = remember(settings.chatFontFamily, settings.customFontPath) {
+        when (settings.chatFontFamily) {
             ChatFontFamily.DEFAULT -> FontFamily.Default
             ChatFontFamily.SERIF -> FontFamily.Serif
             ChatFontFamily.MONOSPACE -> FontFamily.Monospace
             ChatFontFamily.CUSTOM -> {
                 val p = settings.customFontPath
-                if (p.isNotBlank() && File(p).exists()) FontFamily(Font(File(p))) else FontFamily.Default
+                runCatching {
+                    if (p.isNotBlank() && File(p).exists()) FontFamily(Font(File(p))) else FontFamily.Default
+                }.getOrDefault(FontFamily.Default)
             }
         }
-    )
+    }
+    val baseStyle = LocalTextStyle.current
+    val textStyle = remember(baseStyle, settings.fontSizeRatio, settings.chatTextColor, resolvedFontFamily) {
+        baseStyle.copy(
+            fontSize = baseStyle.fontSize * settings.fontSizeRatio,
+            color = settings.chatTextColor?.let { it.toComposeColor() } ?: Color.Unspecified,
+            lineHeight = baseStyle.lineHeight * settings.fontSizeRatio,
+            fontFamily = resolvedFontFamily
+        )
+    }
+    val baseTypo = MaterialTheme.typography
+    val chatTypography = remember(baseTypo, resolvedFontFamily, settings.fontSizeRatio) {
+        baseTypo.copy(
+            bodyLarge = baseTypo.bodyLarge.copy(fontFamily = resolvedFontFamily, fontSize = baseTypo.bodyLarge.fontSize * settings.fontSizeRatio, lineHeight = baseTypo.bodyLarge.lineHeight * settings.fontSizeRatio),
+            bodyMedium = baseTypo.bodyMedium.copy(fontFamily = resolvedFontFamily, fontSize = baseTypo.bodyMedium.fontSize * settings.fontSizeRatio, lineHeight = baseTypo.bodyMedium.lineHeight * settings.fontSizeRatio),
+            bodySmall = baseTypo.bodySmall.copy(fontFamily = resolvedFontFamily, fontSize = baseTypo.bodySmall.fontSize * settings.fontSizeRatio, lineHeight = baseTypo.bodySmall.lineHeight * settings.fontSizeRatio),
+            titleLarge = baseTypo.titleLarge.copy(fontFamily = resolvedFontFamily),
+            titleMedium = baseTypo.titleMedium.copy(fontFamily = resolvedFontFamily),
+            titleSmall = baseTypo.titleSmall.copy(fontFamily = resolvedFontFamily),
+            labelLarge = baseTypo.labelLarge.copy(fontFamily = resolvedFontFamily),
+            labelMedium = baseTypo.labelMedium.copy(fontFamily = resolvedFontFamily),
+            labelSmall = baseTypo.labelSmall.copy(fontFamily = resolvedFontFamily),
+        )
+    }
+
     var showActionsSheet by remember { mutableStateOf(false) }
     var showSelectCopySheet by remember { mutableStateOf(false) }
     val navController = LocalNavController.current
     val context = LocalContext.current
     val colorScheme = MaterialTheme.colorScheme
 
-    Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.role == MessageRole.USER) Alignment.End else Alignment.Start,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        if (!message.parts.isEmptyUIMessage()) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-            ) {
-                ChatMessageAssistantAvatar(message = message, model = model, assistant = assistant, loading = loading, modifier = Modifier.weight(1f))
-                ChatMessageUserAvatar(message = message, avatar = settings.userAvatar, nickname = settings.userNickname, modifier = Modifier.weight(1f))
+    MaterialTheme(colorScheme = colorScheme, typography = chatTypography, shapes = MaterialTheme.shapes) {
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            horizontalAlignment = if (message.role == MessageRole.USER) Alignment.End else Alignment.Start,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (!message.parts.isEmptyUIMessage()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                ) {
+                    ChatMessageAssistantAvatar(message = message, model = model, assistant = assistant, loading = loading, modifier = Modifier.weight(1f))
+                    ChatMessageUserAvatar(message = message, avatar = settings.userAvatar, nickname = settings.userNickname, modifier = Modifier.weight(1f))
+                }
             }
-        }
-        ProvideTextStyle(textStyle) {
-            MessagePartsBlock(
-                assistant = assistant,
-                role = message.role,
-                parts = message.parts,
-                annotations = message.annotations,
-                loading = loading,
-                model = model,
-                onToolApproval = onToolApproval,
-                onToolAnswer = onToolAnswer,
-                onUserMessageClick = if (message.role == MessageRole.USER) onEdit else null,
-            )
-            message.translation?.let { CollapsibleTranslationText(content = it, onClickCitation = {}) }
-        }
-
-        val showActions = if (lastMessage) !loading else !message.parts.isEmptyUIMessage()
-        AnimatedVisibility(visible = showActions, enter = slideInVertically { it / 2 } + fadeIn(), exit = slideOutVertically { it / 2 } + fadeOut()) {
-            Column(modifier = Modifier.animateContentSize()) {
-                ChatMessageActionButtons(
-                    message = message,
-                    onRegenerate = onRegenerate,
-                    node = node,
-                    onUpdate = onUpdate,
-                    onOpenActionSheet = { showActionsSheet = true },
-                    onTranslate = onTranslate,
-                    onClearTranslation = onClearTranslation
+            ProvideTextStyle(textStyle) {
+                MessagePartsBlock(
+                    assistant = assistant,
+                    role = message.role,
+                    parts = message.parts,
+                    annotations = message.annotations,
+                    loading = loading,
+                    model = model,
+                    onToolApproval = onToolApproval,
+                    onToolAnswer = onToolAnswer,
+                    onUserMessageClick = if (message.role == MessageRole.USER) onEdit else null,
                 )
+                message.translation?.let { CollapsibleTranslationText(content = it, onClickCitation = {}) }
             }
+
+            val showActions = if (lastMessage) !loading else !message.parts.isEmptyUIMessage()
+            AnimatedVisibility(visible = showActions, enter = slideInVertically { it / 2 } + fadeIn(), exit = slideOutVertically { it / 2 } + fadeOut()) {
+                Column(modifier = Modifier.animateContentSize()) {
+                    ChatMessageActionButtons(
+                        message = message,
+                        onRegenerate = onRegenerate,
+                        node = node,
+                        onUpdate = onUpdate,
+                        onOpenActionSheet = { showActionsSheet = true },
+                        onTranslate = onTranslate,
+                        onClearTranslation = onClearTranslation
+                    )
+                }
+            }
+            ProvideTextStyle(textStyle) { ChatMessageNerdLine(message = message) }
         }
-        ProvideTextStyle(textStyle) { ChatMessageNerdLine(message = message) }
     }
 
     if (showActionsSheet) {
@@ -268,7 +298,7 @@ private fun MessagePartsBlock(
             is MessagePartBlock.ContentBlock -> key(block.index) {
                 when (val part = block.part) {
                     is UIMessagePart.Text -> {
-                        val displayText = remember(part.text) { part.text.replace(Regex("\\]+\\]", RegexOption.IGNORE_CASE), "") }
+                        val displayText = remember(part.text) { part.text.replace(Regex("\\[JUMP\\]", RegexOption.IGNORE_CASE), "") }
                         val userColor = ds.userBubbleColor?.let { it.toComposeColor() } ?: MaterialTheme.colorScheme.secondaryContainer
                         val aiColor = ds.assistantBubbleColor?.let { it.toComposeColor() } ?: MaterialTheme.colorScheme.surfaceContainerHigh
                         SelectionContainer {
@@ -400,60 +430,93 @@ private fun BubbleSurface(
     content: @Composable () -> Unit,
 ) {
     val ds = LocalDisplaySettings.current
+    val hazeState = LocalHazeState.current
     val shape = RoundedCornerShape(cornerRadius)
     val hasImage = imagePath.isNotBlank() && File(imagePath).exists()
 
-    val styleMod = when (ds.bubbleGlassStyle) {
+    val effectiveAlpha = when (ds.bubbleGlassStyle) {
+        1 -> (bubbleAlpha * 0.42f).coerceIn(0.10f, 0.72f)
+        2 -> (bubbleAlpha * 0.65f).coerceIn(0.22f, 0.85f)
+        else -> bubbleAlpha
+    }
+
+    val hazeMod = if (hazeState != null && (ds.enableBlurEffect || ds.bubbleGlassStyle != 0)) {
+        val style = when (ds.bubbleGlassStyle) {
+            1 -> HazeStyle(
+                backgroundColor = color.copy(alpha = 0.15f),
+                tint = HazeTint(color.copy(alpha = effectiveAlpha)),
+                blurRadius = ds.bubbleBlurRadius.dp,
+                noiseFactor = 0.02f
+            )
+            2 -> HazeStyle(
+                backgroundColor = color.copy(alpha = 0.28f),
+                tint = HazeTint(color.copy(alpha = effectiveAlpha)),
+                blurRadius = (ds.bubbleBlurRadius * 1.35f).dp,
+                noiseFactor = 0.08f
+            )
+            else -> HazeDefaults.style(backgroundColor = color.copy(alpha = effectiveAlpha), blurRadius = ds.bubbleBlurRadius.dp)
+        }
+        Modifier.hazeEffect(state = hazeState, style = style)
+    } else Modifier
+
+    val borderMod = when (ds.bubbleGlassStyle) {
         1 -> Modifier.border(
             width = ds.bubbleBorderWidth.dp,
             brush = Brush.linearGradient(
-                listOf(
-                    Color.White.copy(alpha = ds.bubbleBorderAlpha.coerceIn(0f, 1f)),
-                    Color.White.copy(alpha = (ds.bubbleBorderAlpha * 0.25f).coerceIn(0f, 1f))
+                colors = listOf(
+                    Color.White.copy(alpha = (ds.bubbleBorderAlpha * 1.3f).coerceIn(0f, 1f)),
+                    Color.White.copy(alpha = (ds.bubbleBorderAlpha * 0.2f).coerceIn(0f, 1f)),
+                    Color.White.copy(alpha = (ds.bubbleBorderAlpha * 0.8f).coerceIn(0f, 1f))
                 )
             ),
             shape = shape
         )
-        2 -> Modifier.shadow(elevation = (ds.bubbleBlurRadius / 4f).dp, shape = shape, ambientColor = color, spotColor = color)
-            .border(width = (ds.bubbleBorderWidth * 0.6f).dp, color = Color.White.copy(alpha = (ds.bubbleBorderAlpha * 0.5f).coerceIn(0f, 1f)), shape = shape)
+        2 -> Modifier
+            .shadow(elevation = (ds.bubbleBlurRadius / 3f).dp, shape = shape, ambientColor = color.copy(alpha = 0.5f), spotColor = color.copy(alpha = 0.5f))
+            .border(width = (ds.bubbleBorderWidth * 0.5f).dp, color = Color.White.copy(alpha = (ds.bubbleBorderAlpha * 0.45f).coerceIn(0f, 1f)), shape = shape)
         else -> Modifier
     }
 
-    val effectiveAlpha = when (ds.bubbleGlassStyle) {
-        1 -> (bubbleAlpha * 0.58f).coerceIn(0.12f, 0.88f)
-        2 -> (bubbleAlpha * 0.78f).coerceIn(0.25f, 0.94f)
-        else -> bubbleAlpha
+    val glossBrush = when (ds.bubbleGlassStyle) {
+        1 -> Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = 0.22f),
+                Color.White.copy(alpha = 0.03f),
+                Color.Transparent
+            )
+        )
+        2 -> Brush.radialGradient(
+            listOf(
+                Color.White.copy(alpha = 0.12f),
+                Color.Transparent
+            )
+        )
+        else -> null
     }
 
-    if (hasImage) {
-        Box(
-            modifier = Modifier.animateContentSize().then(styleMod).clip(shape)
-                .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-        ) {
+    Box(
+        modifier = Modifier
+            .animateContentSize()
+            .then(borderMod)
+            .clip(shape)
+            .then(hazeMod)
+            .background(
+                if (hazeState != null && ds.bubbleGlassStyle != 0) color.copy(alpha = (effectiveAlpha * 0.55f).coerceIn(0.08f, 0.75f))
+                else color.copy(alpha = effectiveAlpha)
+            )
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+    ) {
+        if (hasImage) {
             AsyncImage(model = imagePath, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
             if (overlayEnabled || ds.bubbleGlassStyle != 0) {
                 Box(modifier = Modifier.matchParentSize().background(color.copy(alpha = effectiveAlpha)))
             }
-            Column(modifier = Modifier.padding(8.dp)) { content() }
         }
-    } else {
-        Surface(
-            modifier = Modifier.animateContentSize().then(styleMod),
-            shape = shape,
-            color = color.copy(alpha = effectiveAlpha),
-            onClick = onClick ?: {},
-        ) {
-            Box(
-                modifier = if (ds.bubbleGlassStyle == 1) {
-                    Modifier.background(
-                        Brush.verticalGradient(
-                            listOf(Color.White.copy(alpha = 0.14f), Color.Transparent)
-                        )
-                    )
-                } else Modifier
-            ) {
-                Column(modifier = Modifier.padding(8.dp)) { content() }
-            }
+        if (glossBrush != null) {
+            Box(modifier = Modifier.matchParentSize().background(glossBrush))
+        }
+        Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+            content()
         }
     }
 }
