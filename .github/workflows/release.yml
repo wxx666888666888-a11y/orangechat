@@ -37,18 +37,7 @@ jobs:
           chmod +x gradlew
           pnpm install --no-frozen-lockfile || true
           cd web-ui && npm install --legacy-peer-deps && cd ..
-          cat << 'EOF' > material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
-          package me.rerere.material3
-
-          import androidx.compose.material3.ColorScheme
-          import androidx.compose.material3.darkColorScheme
-          import androidx.compose.material3.lightColorScheme
-          import dynamiccolor.DynamicScheme
-
-          fun DynamicScheme.toColorScheme(): ColorScheme {
-              return if (isDark) darkColorScheme() else lightColorScheme()
-          }
-          EOF
+          echo "package me.rerere.material3" > material3/src/main/java/me/rerere/material3/DynamicSchemeExt.kt
           cat << 'EOF' > app/google-services.json
           {
             "project_info": {
