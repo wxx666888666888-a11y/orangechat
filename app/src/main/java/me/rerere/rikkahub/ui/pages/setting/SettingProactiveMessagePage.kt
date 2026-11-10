@@ -32,6 +32,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import me.rerere.ai.provider.Model
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.Add01
 import me.rerere.hugeicons.stroke.Clock01
@@ -57,11 +58,21 @@ object ProactivePageEntryHolder {
     var initialSection: Int = 0 // 0 = 独立主动消息页, 1 = 独立定时任务闹钟页
 }
 
+private fun splitAssistantAndModel(raw: String): Pair<String, String> {
+    val parts = raw.split("#model:", limit = 2)
+    return parts[0] to (parts.getOrNull(1) ?: "")
+}
+
+private fun combineAssistantAndModel(assistantId: String, modelId: String): String {
+    return if (modelId.isBlank()) assistantId else "$assistantId#model:$modelId"
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingProactiveMessagePage(vm: SettingVM = koinViewModel()) {
     val settings by vm.settings.collectAsStateWithLifecycle()
     val proactiveSetting = settings.proactiveMessageSetting
+    val allModels = remember(settings.providers) { settings.providers.flatMap { it.models } }
     val context = LocalContext.current
     val section = remember { ProactivePageEntryHolder.initialSection }
 
@@ -114,6 +125,7 @@ fun SettingProactiveMessagePage(vm: SettingVM = koinViewModel()) {
                 context = context,
                 proactiveSetting = proactiveSetting,
                 assistants = settings.assistants,
+                models = allModels,
                 nextTriggerTime = nextTriggerTime,
                 onSave = ::saveAndSchedule
             )
@@ -124,6 +136,7 @@ fun SettingProactiveMessagePage(vm: SettingVM = koinViewModel()) {
                     .padding(innerPadding),
                 tasks = proactiveSetting.scheduledTasks,
                 assistants = settings.assistants,
+                models = allModels,
                 onAddClick = {
                     editingTask = ScheduledTaskItem(id = UUID.randomUUID().toString())
                     showTaskDialog = true
@@ -150,6 +163,7 @@ fun SettingProactiveMessagePage(vm: SettingVM = koinViewModel()) {
         WheelScheduledTaskDialog(
             initialTask = editingTask!!,
             assistants = settings.assistants,
+            models = allModels,
             onDismiss = { showTaskDialog = false },
             onConfirm = { saved ->
                 val fixedTask = saved.copy(id = saved.id.ifBlank { UUID.randomUUID().toString() })
@@ -177,6 +191,7 @@ private fun OriginalProactiveSection(
     context: Context,
     proactiveSetting: ProactiveMessageSetting,
     assistants: List<Assistant>,
+    models: List<Model>,
     nextTriggerTime: Long?,
     onSave: (ProactiveMessageSetting) -> Unit
 ) {
@@ -185,6 +200,9 @@ private fun OriginalProactiveSection(
     }
     var maxText by remember(proactiveSetting.maxIntervalMinutes) {
         mutableStateOf(proactiveSetting.maxIntervalMinutes.toString())
+    }
+    val (pureAssistantId, selectedModelId) = remember(proactiveSetting.assistantId) {
+        splitAssistantAndModel(proactiveSetting.assistantId)
     }
 
     LazyColumn(
@@ -302,11 +320,34 @@ private fun OriginalProactiveSection(
                         Text("指定触发助手", style = MaterialTheme.typography.bodyMedium)
                         Select(
                             options = assistantOptions,
-                            selectedOption = proactiveSetting.assistantId,
-                            onOptionSelected = { onSave(proactiveSetting.copy(assistantId = it)) },
+                            selectedOption = pureAssistantId,
+                            onOptionSelected = { newAssId ->
+                                onSave(proactiveSetting.copy(assistantId = combineAssistantAndModel(newAssId, selectedModelId)))
+                            },
                             optionToString = { id ->
                                 if (id.isBlank()) "跟随当前助手"
                                 else assistants.find { it.id.toString() == id }?.name?.ifBlank { "未命名" } ?: "跟随当前助手"
+                            },
+                            modifier = Modifier.width(190.dp)
+                        )
+                    }
+
+                    val modelOptions = remember(models) { listOf("") + models.map { it.id.toString() } }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("使用模型", style = MaterialTheme.typography.bodyMedium)
+                        Select(
+                            options = modelOptions,
+                            selectedOption = selectedModelId,
+                            onOptionSelected = { newModelId ->
+                                onSave(proactiveSetting.copy(assistantId = combineAssistantAndModel(pureAssistantId, newModelId)))
+                            },
+                            optionToString = { id ->
+                                if (id.isBlank()) "跟随当前使用模型"
+                                else models.find { it.id.toString() == id }?.displayName?.ifBlank { "未命名模型" } ?: "跟随当前使用模型"
                             },
                             modifier = Modifier.width(190.dp)
                         )
@@ -373,6 +414,7 @@ private fun ScheduledAlarmSection(
     modifier: Modifier,
     tasks: List<ScheduledTaskItem>,
     assistants: List<Assistant>,
+    models: List<Model>,
     onAddClick: () -> Unit,
     onEditClick: (ScheduledTaskItem) -> Unit,
     onToggleTask: (ScheduledTaskItem, Boolean) -> Unit,
@@ -431,7 +473,9 @@ private fun ScheduledAlarmSection(
                     ScheduledTargetWindow.NEW_WINDOW -> "新建窗口"
                     ScheduledTargetWindow.FIXED_WINDOW -> "固定窗口"
                 }
-                val assistantName = assistants.find { it.id.toString() == task.assistantId }?.name?.ifBlank { "当前助手" } ?: "当前助手"
+                val (pureAssId, pureModelId) = splitAssistantAndModel(task.assistantId)
+                val assistantName = assistants.find { it.id.toString() == pureAssId }?.name?.ifBlank { "当前助手" } ?: "当前助手"
+                val modelName = if (pureModelId.isBlank()) "跟随当前模型" else models.find { it.id.toString() == pureModelId }?.displayName ?: "跟随当前模型"
 
                 Card(
                     shape = RoundedCornerShape(22.dp),
@@ -462,7 +506,7 @@ private fun ScheduledAlarmSection(
                                 )
                             }
                             Text(
-                                text = "$dayText · $modeText · $assistantName",
+                                text = "$dayText · $modeText · $assistantName · $modelName",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -623,16 +667,19 @@ private fun NumberWheelColumn(
 private fun WheelScheduledTaskDialog(
     initialTask: ScheduledTaskItem,
     assistants: List<Assistant>,
+    models: List<Model>,
     onDismiss: () -> Unit,
     onConfirm: (ScheduledTaskItem) -> Unit
 ) {
+    val initialSplit = remember(initialTask.assistantId) { splitAssistantAndModel(initialTask.assistantId) }
     var title by remember { mutableStateOf(initialTask.title) }
     var hour by remember { mutableIntStateOf(initialTask.hour.coerceIn(0, 23)) }
     var minute by remember { mutableIntStateOf(initialTask.minute.coerceIn(0, 59)) }
     var days by remember { mutableStateOf(initialTask.daysOfWeek.ifEmpty { setOf(1, 2, 3, 4, 5, 6, 7) }) }
     var targetMode by remember { mutableStateOf(initialTask.targetMode) }
     var fixedConvId by remember { mutableStateOf(initialTask.fixedConversationId) }
-    var assistantId by remember { mutableStateOf(initialTask.assistantId) }
+    var assistantId by remember { mutableStateOf(initialSplit.first) }
+    var modelId by remember { mutableStateOf(initialSplit.second) }
     var prompt by remember { mutableStateOf(initialTask.prompt) }
 
     val dayLabels = listOf(1 to "一", 2 to "二", 3 to "三", 4 to "四", 5 to "五", 6 to "六", 7 to "日")
@@ -744,6 +791,25 @@ private fun WheelScheduledTaskDialog(
                     )
                 }
 
+                val modelOptions = remember(models) { listOf("") + models.map { it.id.toString() } }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("使用模型", style = MaterialTheme.typography.labelMedium)
+                    Select(
+                        options = modelOptions,
+                        selectedOption = modelId,
+                        onOptionSelected = { modelId = it },
+                        optionToString = { id ->
+                            if (id.isBlank()) "跟随当前使用模型"
+                            else models.find { it.id.toString() == id }?.displayName?.ifBlank { "未命名模型" } ?: "跟随当前使用模型"
+                        },
+                        modifier = Modifier.width(180.dp)
+                    )
+                }
+
                 OutlinedTextField(
                     value = prompt,
                     onValueChange = { prompt = it },
@@ -766,7 +832,7 @@ private fun WheelScheduledTaskDialog(
                             daysOfWeek = days,
                             targetMode = targetMode,
                             fixedConversationId = fixedConvId.trim(),
-                            assistantId = assistantId,
+                            assistantId = combineAssistantAndModel(assistantId, modelId),
                             prompt = prompt.trim()
                         )
                     )
