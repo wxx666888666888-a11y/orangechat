@@ -1,4 +1,4 @@
-﻿/*
+/*
  * 橘瓣 OrangeChat
  * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
  * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
@@ -8,14 +8,23 @@ package me.rerere.rikkahub.ui.pages.chat
 
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
@@ -35,9 +44,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -54,6 +65,7 @@ import me.rerere.ai.provider.Model
 import me.rerere.ai.ui.UIMessagePart
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.Cancel01
+import me.rerere.hugeicons.stroke.Delete01
 import me.rerere.hugeicons.stroke.LeftToRightListBullet
 import me.rerere.hugeicons.stroke.Menu03
 import me.rerere.hugeicons.stroke.MessageAdd01
@@ -261,9 +273,104 @@ private fun ChatPageContent(
     val scope = rememberCoroutineScope()
     val toaster = LocalToaster.current
     var previewMode by rememberSaveable { mutableStateOf(false) }
+    var showBatchDeleteDialog by rememberSaveable { mutableStateOf(false) }
     val hazeState = rememberHazeState()
 
     TTSAutoPlay(vm = vm, setting = setting, conversation = conversation)
+
+    if (showBatchDeleteDialog) {
+        val currentMessages = conversation.currentMessages
+        var selectedIds by remember(currentMessages) { mutableStateOf(setOf<Uuid>()) }
+
+        AlertDialog(
+            onDismissRequest = { showBatchDeleteDialog = false },
+            title = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("多选删除消息 (${selectedIds.size})")
+                    TextButton(
+                        onClick = {
+                            val allIds = currentMessages.map { it.id }.toSet()
+                            selectedIds = if (selectedIds.size == allIds.size) emptySet() else allIds
+                        }
+                    ) {
+                        Text(if (selectedIds.size == currentMessages.size && currentMessages.isNotEmpty()) "取消全选" else "全选")
+                    }
+                }
+            },
+            text = {
+                if (currentMessages.isEmpty()) {
+                    Text("当前没有可删除的消息")
+                } else {
+                    LazyColumn(modifier = Modifier.heightIn(max = 380.dp)) {
+                        itemsIndexed(currentMessages, key = { _, msg -> msg.id }) { index, msg ->
+                            val isChecked = selectedIds.contains(msg.id)
+                            val previewText = msg.parts.filterIsInstance<UIMessagePart.Text>()
+                                .joinToString(" ") { it.text }
+                                .ifBlank { "[非文本消息]" }
+                            Column {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedIds = if (isChecked) selectedIds - msg.id else selectedIds + msg.id
+                                        }
+                                        .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            selectedIds = if (isChecked) selectedIds - msg.id else selectedIds + msg.id
+                                        }
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "#${index + 1} (${msg.role.name})",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Text(
+                                            text = previewText,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+                                }
+                                HorizontalDivider()
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = selectedIds.isNotEmpty(),
+                    onClick = {
+                        if (loadingJob != null) {
+                            vm.showDeleteBlockedWhileGeneratingError()
+                        } else {
+                            val toDelete = currentMessages.filter { selectedIds.contains(it.id) }
+                            vm.deleteMessages(toDelete)
+                            toaster.show("已删除 ${toDelete.size} 条消息", type = ToastType.Success)
+                        }
+                        showBatchDeleteDialog = false
+                    }
+                ) {
+                    Text("删除所选", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBatchDeleteDialog = false }) {
+                    Text(stringResource(R.string.chat_page_cancel))
+                }
+            }
+        )
+    }
 
     Surface(
         color = MaterialTheme.colorScheme.background,
@@ -283,6 +390,9 @@ private fun ChatPageContent(
                     },
                     onClickMenu = {
                         previewMode = !previewMode
+                    },
+                    onBatchDeleteClick = {
+                        showBatchDeleteDialog = true
                     },
                     onUpdateTitle = {
                         vm.updateTitle(it)
@@ -486,6 +596,7 @@ private fun TopBar(
     bigScreen: Boolean,
     previewMode: Boolean,
     onClickMenu: () -> Unit,
+    onBatchDeleteClick: () -> Unit,
     onNewChat: () -> Unit,
     onUpdateTitle: (String) -> Unit,
     onVoiceCall: () -> Unit,
@@ -546,6 +657,16 @@ private fun TopBar(
             }
         },
         actions = {
+            if (conversation.messageNodes.isNotEmpty()) {
+                IconButton(
+                    onClick = {
+                        onBatchDeleteClick()
+                    }
+                ) {
+                    Icon(HugeIcons.Delete01, "Batch Delete")
+                }
+            }
+
             IconButton(
                 onClick = {
                     onVoiceCall()
