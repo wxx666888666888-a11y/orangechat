@@ -1,4 +1,4 @@
-﻿/*
+/*
  * 橘瓣 OrangeChat
  * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
  * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
@@ -46,6 +46,8 @@ import me.rerere.rikkahub.ui.hooks.writeStringPreference
 import me.rerere.rikkahub.ui.hooks.ChatInputState
 import me.rerere.rikkahub.utils.UiState
 import me.rerere.rikkahub.utils.UpdateChecker
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
 import kotlin.uuid.Uuid
 
@@ -171,15 +173,28 @@ class ChatVM(
         updateChecker.checkUpdate().stateIn(viewModelScope, SharingStarted.Eagerly, UiState.Loading)
 
     /**
-     * 处理消息发送
+     * 处理消息发送（自动注入永久时间戳）
      *
      * @param content 消息内容
      * @param answer 是否触发消息生成，如果为false，则仅添加消息到消息列表中
      */
-    fun handleMessageSend(content: List<UIMessagePart>,answer: Boolean = true) {
+    fun handleMessageSend(content: List<UIMessagePart>, answer: Boolean = true) {
         if (content.isEmptyInputMessage()) return
 
-        chatService.sendMessage(_conversationId, content, answer)
+        val timestamp = SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", Locale.CHINA).format(Date())
+        var injected = false
+        val stampedContent = content.map { part ->
+            if (!injected && part is UIMessagePart.Text) {
+                injected = true
+                if (part.text.startsWith("202")) part else part.copy(text = "$timestamp${part.text}")
+            } else {
+                part
+            }
+        }.let { list ->
+            if (!injected) listOf(UIMessagePart.Text(timestamp)) + list else list
+        }
+
+        chatService.sendMessage(_conversationId, stampedContent, answer)
     }
 
     fun handleMessageEdit(parts: List<UIMessagePart>, messageId: Uuid) {
@@ -211,6 +226,14 @@ class ChatVM(
     fun deleteMessage(message: UIMessage) {
         viewModelScope.launch {
             chatService.deleteMessage(_conversationId, message)
+        }
+    }
+
+    fun deleteMessages(messages: List<UIMessage>) {
+        viewModelScope.launch {
+            messages.forEach { message ->
+                chatService.deleteMessage(_conversationId, message)
+            }
         }
     }
 
