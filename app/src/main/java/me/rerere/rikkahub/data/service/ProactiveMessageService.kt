@@ -584,12 +584,20 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                     }
                 }
 
-                val targetAssistantId = scheduledTask?.assistantId?.ifBlank { proactiveSetting.assistantId }
+                val rawConfigStr = scheduledTask?.assistantId?.ifBlank { proactiveSetting.assistantId }
                     ?: proactiveSetting.assistantId
+                val splitParts = rawConfigStr.split("#model:", limit = 2)
+                val targetAssistantId = splitParts[0]
+                val customModelId = splitParts.getOrNull(1).orEmpty()
+
                 val assistant = settings.assistants.find { it.id.toString() == targetAssistantId }
                     ?: settings.getCurrentAssistant()
                 val assistantUuid = assistant.id
-                val model = settings.findModelById(assistant.chatModelId ?: settings.chatModelId)
+                val customModelUuid = runCatching {
+                    if (customModelId.isNotBlank()) Uuid.parse(customModelId) else null
+                }.getOrNull()
+                val model = (customModelUuid?.let { settings.findModelById(it) })
+                    ?: settings.findModelById(assistant.chatModelId ?: settings.chatModelId)
 
                 if (model == null) {
                     Log.e(ProactiveMessageService.TAG, "No model found for proactive message")
@@ -660,19 +668,21 @@ class ProactiveMessageTriggerService : android.app.Service(), KoinComponent {
                     scheduledTask = scheduledTask
                 )
 
+                val nowStamp = java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", java.util.Locale.CHINA).format(java.util.Date())
+
                 // 隐形触发话术：只在本次请求发给模型，不写入数据库 user 节点，界面上毫无痕迹
                 val userInstruction = when {
                     scheduledTask != null && scheduledTask.prompt.isNotBlank() -> {
-                        "[定时任务隐形指令：${scheduledTask.title}]\n${scheduledTask.prompt}\n（请直接按指令对用户开口，不要复述本括号和指令标题）"
+                        "$nowStamp [定时任务隐形指令：${scheduledTask.title}]\n${scheduledTask.prompt}\n（请直接按指令对用户开口，不要复述本括号和指令标题）"
                     }
                     scheduledTask != null -> {
-                        "现在到了预定的【${scheduledTask.title}】时间，请自然地主动跟用户开口说话。"
+                        "$nowStamp 现在到了预定的【${scheduledTask.title}】时间，请自然地主动跟用户开口说话。"
                     }
                     isFromDeviceEvent -> {
-                        "请根据以上用户动向决定是否发消息。没什么好说的就回复 [PASS]。"
+                        "$nowStamp 请根据以上用户动向决定是否发消息。没什么好说的就回复 [PASS]。"
                     }
                     else -> {
-                        "请根据以上上下文决定是否发消息。没什么好说的就回复 [PASS] 即可，不要强行找话题。"
+                        "$nowStamp 请根据以上上下文决定是否发消息。没什么好说的就回复 [PASS] 即可，不要强行找话题。"
                     }
                 }
 
