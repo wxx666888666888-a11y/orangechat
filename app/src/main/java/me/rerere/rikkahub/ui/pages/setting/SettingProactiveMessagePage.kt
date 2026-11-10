@@ -348,8 +348,16 @@ private fun OriginalProactiveSection(
                                 val next = proactiveSetting.copy(aggressiveModeEnabled = enabled)
                                 onSave(next)
                                 runCatching {
-                                    if (enabled) DeviceEventAiTriggerService.start(context)
-                                    else DeviceEventAiTriggerService.stop(context)
+                                    val serviceIntent = Intent(context, DeviceEventAiTriggerService::class.java)
+                                    if (enabled) {
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                            context.startForegroundService(serviceIntent)
+                                        } else {
+                                            context.startService(serviceIntent)
+                                        }
+                                    } else {
+                                        context.stopService(serviceIntent)
+                                    }
                                 }
                             }
                         )
@@ -387,7 +395,7 @@ private fun ScheduledAlarmSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 42.dp, horizontal = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
@@ -511,7 +519,6 @@ private fun WheelTimePicker(
                 .padding(horizontal = 24.dp),
             contentAlignment = Alignment.Center
         ) {
-            // 中心选中高亮条
             Surface(
                 shape = RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f),
