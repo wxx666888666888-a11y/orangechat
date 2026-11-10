@@ -68,6 +68,8 @@ import kotlin.uuid.Uuid
 
 private const val TAG = "ChatService"
 const val COMPRESS_DIVIDER_TAG = "━━━ ✂️ 上下文摘要分割线"
+private val JUMP_TOKEN = "[" + "JUMP" + "]"
+private val JUMP_REGEX = Regex("\\[" + "JUMP" + "\\]", RegexOption.IGNORE_CASE)
 
 data class ChatError(
     val id: Uuid = Uuid.random(),
@@ -439,7 +441,7 @@ class ChatService(
                 addProactiveMessage(conversationId, UIMessage(role = MessageRole.ASSISTANT, parts = listOf(UIMessagePart.Text(replyText))))
 
                 if (!isForeground.value) {
-                    val senderName = if (assistant.useAssistantAvatar) assistant.name.ifEmpty { context.getString(R.string.assistant_page_default_assistant) } else model.displayName
+                    val senderName = if (assistant.useAssistantName && assistant.useAssistantAvatar) assistant.name.ifEmpty { context.getString(R.string.assistant_page_default_assistant) } else model.displayName
                     sendGenerationDoneNotification(conversationId, senderName)
                 }
             } catch (e: Exception) {
@@ -529,10 +531,6 @@ class ChatService(
         session.setJob(job)
     }
 
-    /**
-     * 若本窗口存在无损压缩分割线，则只将最后一条分割线（含该条摘要）及其后的消息发给大模型，
-     * 分割线之前的全部历史仍完整保留在当前界面，随时删掉分割线消息即可恢复完整上下文。
-     */
     private fun sliceAfterLastCompressDivider(messages: List<UIMessage>): List<UIMessage> {
         val idx = messages.indexOfLast { msg ->
             msg.parts.any { it is UIMessagePart.Text && it.text.contains(COMPRESS_DIVIDER_TAG) }
@@ -546,7 +544,7 @@ class ChatService(
         val assistant = settings.getAssistantById(initialConversation.assistantId) ?: settings.getCurrentAssistant()
         val model = settings.findModelById(assistant.chatModelId ?: settings.chatModelId) ?: return
 
-        val senderName = if (assistant.useAssistantAvatar) {
+        val senderName = if (assistant.useAssistantName) {
             assistant.name.ifEmpty { context.getString(R.string.assistant_page_default_assistant) }
         } else model.displayName
 
@@ -667,12 +665,12 @@ class ChatService(
             try {
                 val lastAssistantMessage = finalConversation.currentMessages.lastOrNull { it.role == MessageRole.ASSISTANT }
                 val rawText = lastAssistantMessage?.parts?.filterIsInstance<UIMessagePart.Text>()?.joinToString("\n") { it.text } ?: ""
-                if (rawText.contains("", ignoreCase = true)) {
-                    val cleanedText = rawText.replace("\\".toRegex(RegexOption.IGNORE_CASE), "").trim()
+                if (rawText.contains(JUMP_TOKEN, ignoreCase = true)) {
+                    val cleanedText = rawText.replace(JUMP_REGEX, "").trim()
                     if (lastAssistantMessage != null && cleanedText != rawText) {
                         val cleanedMessage = lastAssistantMessage.copy(
                             parts = lastAssistantMessage.parts.map { part ->
-                                if (part is UIMessagePart.Text) UIMessagePart.Text(part.text.replace("\\".toRegex(RegexOption.IGNORE_CASE), "").trim()) else part
+                                if (part is UIMessagePart.Text) UIMessagePart.Text(part.text.replace(JUMP_REGEX, "").trim()) else part
                             }
                         )
                         val cleanedConversation = finalConversation.copy(
@@ -690,7 +688,7 @@ class ChatService(
                     context.startActivity(jumpIntent)
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to handle  in normal chat", e)
+                Log.w(TAG, "Failed to handle jump token in normal chat", e)
             }
 
             runCatching {
@@ -912,7 +910,6 @@ class ChatService(
 
         val inPlace = settings.displaySetting.compressInPlaceMode
         val newMessageNodes = if (inPlace) {
-            // KE 模式：全部历史节点原封不动保留，在保留的最近 N 条消息之前插入“上下文摘要分割线”节点
             val combinedSummary = buildString {
                 appendLine("$COMPRESS_DIVIDER_TAG（长按删除此条即可恢复上方全部历史） ━━━")
                 appendLine()
@@ -927,7 +924,6 @@ class ChatService(
                 addAll(allNodes.subList(insertIndex, allNodes.size))
             }
         } else {
-            // 原版模式：直接替换历史消息
             buildList {
                 compressedSummaries.forEach { summary -> add(UIMessage.user(summary).toMessageNode()) }
                 addAll(messagesToKeep.map { it.toMessageNode() })
