@@ -1,4 +1,4 @@
-﻿/*
+/*
  * 橘瓣 OrangeChat
  * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
  * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
@@ -29,7 +29,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
@@ -48,31 +47,29 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.AiMagic
 import me.rerere.hugeicons.stroke.Alert01
-import me.rerere.hugeicons.stroke.CloudServer
 import me.rerere.hugeicons.stroke.Book01
-import me.rerere.hugeicons.stroke.Book03
 import me.rerere.hugeicons.stroke.Bookshelf01
 import me.rerere.hugeicons.stroke.Brain02
 import me.rerere.hugeicons.stroke.Clapping01
+import me.rerere.hugeicons.stroke.Clock01
 import me.rerere.hugeicons.stroke.Database02
-import me.rerere.hugeicons.stroke.Developer
 import me.rerere.hugeicons.stroke.GlobalSearch
 import me.rerere.hugeicons.stroke.ImageUpload
 import me.rerere.hugeicons.stroke.InLove
 import me.rerere.hugeicons.stroke.LookTop
 import me.rerere.hugeicons.stroke.McpServer
 import me.rerere.hugeicons.stroke.Megaphone01
+import me.rerere.hugeicons.stroke.Message01
+import me.rerere.hugeicons.stroke.MessageMultiple01
 import me.rerere.hugeicons.stroke.Package
 import me.rerere.hugeicons.stroke.Pulse01
 import me.rerere.hugeicons.stroke.ServerStack01
 import me.rerere.hugeicons.stroke.Settings03
+import me.rerere.hugeicons.stroke.Share04
 import me.rerere.hugeicons.stroke.Shield02
 import me.rerere.hugeicons.stroke.SmartPhone01
-import me.rerere.hugeicons.stroke.Share04
 import me.rerere.hugeicons.stroke.Sun01
 import me.rerere.hugeicons.stroke.WavingHand01
-import me.rerere.hugeicons.stroke.MessageMultiple01
-import me.rerere.hugeicons.stroke.Message01
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.Screen
 import me.rerere.rikkahub.data.datastore.isNotConfigured
@@ -274,10 +271,22 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
                         headlineContent = { Text("系统工具") },
                     )
                     item(
-                        onClick = { navController.navigate(Screen.SettingProactiveMessage) },
+                        onClick = {
+                            ProactivePageEntryHolder.initialSection = 0
+                            navController.navigate(Screen.SettingProactiveMessage)
+                        },
                         leadingContent = { Icon(HugeIcons.WavingHand01, null) },
                         supportingContent = { Text("AI 在设定间隔内主动发消息，有记忆有上下文") },
                         headlineContent = { Text("主动消息") },
+                    )
+                    item(
+                        onClick = {
+                            ProactivePageEntryHolder.initialSection = 1
+                            navController.navigate(Screen.SettingProactiveMessage)
+                        },
+                        leadingContent = { Icon(HugeIcons.Clock01, null) },
+                        supportingContent = { Text("定点几时几分、每周几、隐形指令、指定窗口触发") },
+                        headlineContent = { Text("定时任务闹钟") },
                     )
                     item(
                         onClick = { navController.navigate(Screen.SettingWeixinBot) },
