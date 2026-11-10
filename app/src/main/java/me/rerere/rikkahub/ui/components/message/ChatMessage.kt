@@ -44,6 +44,7 @@ import androidx.core.net.toFile
 import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import dev.chrisbanes.haze.HazeDefaults
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
@@ -78,7 +79,6 @@ import me.rerere.rikkahub.ui.components.ui.ChainOfThought
 import me.rerere.rikkahub.ui.components.ui.Favicon
 import me.rerere.rikkahub.ui.components.ui.toComposeColor
 import me.rerere.rikkahub.ui.context.LocalDisplaySettings
-import me.rerere.rikkahub.ui.context.LocalHazeState
 import me.rerere.rikkahub.ui.context.LocalNavController
 import me.rerere.rikkahub.ui.modifier.shimmer
 import me.rerere.rikkahub.ui.theme.extendColors
@@ -91,6 +91,8 @@ import java.io.File
 import java.util.Locale
 import java.util.Random
 import kotlin.time.Duration.Companion.milliseconds
+
+val LocalHazeState = compositionLocalOf<HazeState?> { null }
 
 @Composable
 fun ChatMessage(
