@@ -1,7 +1,6 @@
 package me.rerere.rikkahub.data.datastore
 
 import kotlinx.serialization.Serializable
-import kotlin.uuid.Uuid
 
 @Serializable
 enum class ScheduledTargetWindow {
@@ -12,7 +11,7 @@ enum class ScheduledTargetWindow {
 
 @Serializable
 data class ScheduledTaskItem(
-    val id: String = Uuid.random().toString(),
+    val id: String = "",
     val title: String = "定时主动消息",
     val enabled: Boolean = true,
     val hour: Int = 8,
