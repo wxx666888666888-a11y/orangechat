@@ -44,6 +44,7 @@ data class Assistant(
     val lorebookIds: Set<Uuid> = emptySet(),
     val enabledSkills: Set<String> = emptySet(),
     val enableTimeReminder: Boolean = false,
+    val cleanThinkingProcess: Boolean = false,
     val allowConversationSystemPrompt: Boolean = false,
     val allowSkipReply: Boolean = false,
     val externalMemoryIds: Set<Uuid> = emptySet(),
