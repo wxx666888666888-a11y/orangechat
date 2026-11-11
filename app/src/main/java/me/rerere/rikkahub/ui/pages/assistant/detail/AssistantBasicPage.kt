@@ -108,35 +108,20 @@ internal fun AssistantBasicContent(
             }
             HorizontalDivider()
             FormItem(
-                label = { Text(stringResource(R.string.assistant_page_workspace_binding)) },
-                description = { Text(stringResource(R.string.assistant_page_workspace_binding_desc)) },
                 modifier = Modifier.padding(8.dp),
-            ) {
-                val options = remember(workspaces) { listOf<WorkspaceEntity?>(null) + workspaces }
-                Select(
-                    options = options,
-                    selectedOption = workspaces.find { it.id == assistant.workspaceId?.toString() },
-                    onOptionSelected = { sel -> onUpdate(assistant.copy(workspaceId = sel?.id?.let { Uuid.parse(it) })) },
-                    optionToString = { it?.name ?: stringResource(R.string.workspace_no_binding) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            HorizontalDivider()
-            FormItem(
-                modifier = Modifier.padding(8.dp),
-                label = { Text("使用助手头像") },
-                description = { Text("开启后聊天消息使用助手自定义头像（与名字开关独立）") },
+                label = { Text("显示时间戳") },
+                description = { Text("开启后在每条消息前显示时间戳") },
                 tail = {
-                    Switch(checked = assistant.useAssistantAvatar, onCheckedChange = { onUpdate(assistant.copy(useAssistantAvatar = it)) })
+                    Switch(checked = assistant.enableTimeReminder, onCheckedChange = { onUpdate(assistant.copy(enableTimeReminder = it)) })
                 }
             )
             HorizontalDivider()
             FormItem(
                 modifier = Modifier.padding(8.dp),
-                label = { Text("使用助手名字") },
-                description = { Text("开启后聊天消息显示助手名字；关闭则显示模型原名（与头像开关独立）") },
+                label = { Text("清理思维链") },
+                description = { Text("开启后，将彻底隐藏AI思考过程，不产生空白气泡") },
                 tail = {
-                    Switch(checked = assistant.useAssistantName, onCheckedChange = { onUpdate(assistant.copy(useAssistantName = it)) })
+                    Switch(checked = assistant.cleanThinkingProcess, onCheckedChange = { onUpdate(assistant.copy(cleanThinkingProcess = it)) })
                 }
             )
             HorizontalDivider()
