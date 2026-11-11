@@ -205,7 +205,9 @@ fun ChatMessage(
                     )
                 }
             }
-            ProvideTextStyle(textStyle) { ChatMessageNerdLine(message = message) }
+            if (assistant?.enableTimeReminder == true) {
+                ProvideTextStyle(textStyle) { ChatMessageNerdLine(message = message) }
+            }
         }
     }
 
@@ -283,15 +285,17 @@ private fun MessagePartsBlock(
     groupedParts.fastForEach { block ->
         when (block) {
             is MessagePartBlock.ThinkingBlock -> {
-                if (block.steps.isNotEmpty()) {
-                    val onlyReasoning = block.steps.fastAll { it is ThinkingStep.ReasoningStep }
-                    ChainOfThought(modifier = Modifier.animateContentSize(), steps = block.steps, collapsedAdaptiveWidth = onlyReasoning) { step ->
-                        when (step) {
-                            is ThinkingStep.ReasoningStep -> key(step.reasoning.createdAt) {
-                                ChatMessageReasoningStep(reasoning = step.reasoning, model = model, assistant = assistant, collapsedAdaptiveWidth = onlyReasoning)
-                            }
-                            is ThinkingStep.ToolStep -> key(step.tool.toolCallId.ifBlank { step.hashCode().toString() }) {
-                                ChatMessageToolStep(tool = step.tool, loading = loading && !step.tool.isExecuted, allParts = parts, onToolApproval = onToolApproval, onToolAnswer = onToolAnswer)
+                if (!(assistant != null && assistant.cleanThinkingProcess)) {
+                    if (block.steps.isNotEmpty()) {
+                        val onlyReasoning = block.steps.fastAll { it is ThinkingStep.ReasoningStep }
+                        ChainOfThought(modifier = Modifier.animateContentSize(), steps = block.steps, collapsedAdaptiveWidth = onlyReasoning) { step ->
+                            when (step) {
+                                is ThinkingStep.ReasoningStep -> key(step.reasoning.createdAt) {
+                                    ChatMessageReasoningStep(reasoning = step.reasoning, model = model, assistant = assistant, collapsedAdaptiveWidth = onlyReasoning)
+                                }
+                                is ThinkingStep.ToolStep -> key(step.tool.toolCallId.ifBlank { step.hashCode().toString() }) {
+                                    ChatMessageToolStep(tool = step.tool, loading = loading && !step.tool.isExecuted, allParts = parts, onToolApproval = onToolApproval, onToolAnswer = onToolAnswer)
+                                }
                             }
                         }
                     }
