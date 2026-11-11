@@ -1,64 +1,65 @@
-<?xml version="1.0" encoding="utf-8"?>
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- 柔和浅米奶白背景 -->
+    <!-- 提亮后的暖米白底色 -->
     <path
-        android:fillColor="#FFFDF6EC"
+        android:fillColor="#FFFDF7"
         android:pathData="M0,0h108v108h-108z" />
 
-    <!-- 中心极淡暖杏色柔光圆晕，衬托曲奇和团子 -->
+    <!-- 扩大后的暖杏色圆底盘（留白更小，整体放大更清晰） -->
     <path
-        android:fillColor="#FFF7EADF"
-        android:pathData="M54,54m-34,0a34,34 0,1 1,68 0a34,34 0,1 1,-68 0" />
+        android:fillColor="#F5EBDC"
+        android:pathData="M54,54m-38,0a38,38 0,1 1,76 0a38,38 0,1 1,-76 0" />
 
-    <!-- 左上偏中：淡焦糖曲奇 🍪（比团子略大一点，微倾） -->
+    <!-- 左上方：加深烤色后的脆曲奇（往左上方移，与右下角团子错开，绝不连成一条线） -->
     <path
-        android:fillColor="#FFE5C19A"
-        android:pathData="M43,43m-16.5,0a16.5,16.5 0,1 1,33 0a16.5,16.5 0,1 1,-33 0" />
-    <!-- 曲奇柔和内圈高光 -->
+        android:fillColor="#D48B45"
+        android:pathData="M37,37m-13.5,0a13.5,13.5 0,1 1,27 0a13.5,13.5 0,1 1,-27 0" />
     <path
-        android:fillColor="#FFECD0AF"
-        android:pathData="M41.5,41.5m-13,0a13,13 0,1 1,26 0a13,13 0,1 1,-26 0" />
-    <!-- 曲奇上的小巧克力豆 -->
+        android:fillColor="#E39D54"
+        android:pathData="M36.2,36.2m-11.5,0a11.5,11.5 0,1 1,23 0a11.5,11.5 0,1 1,-23 0" />
+    <!-- 曲奇上的深浓巧克力豆 -->
     <path
-        android:fillColor="#FF9E7656"
-        android:pathData="M37,36m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
+        android:fillColor="#4A2511"
+        android:pathData="M31.5,31.5m-2.2,0a2.2,2.2 0,1 1,4.4 0a2.2,2.2 0,1 1,-4.4 0" />
     <path
-        android:fillColor="#FF8C6548"
-        android:pathData="M47.5,35.5m-1.8,0a1.8,1.8 0,1 1,3.6 0a1.8,1.8 0,1 1,-3.6 0" />
+        android:fillColor="#4A2511"
+        android:pathData="M41.5,31m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
     <path
-        android:fillColor="#FF9E7656"
-        android:pathData="M42,45.5m-2.3,0a2.3,2.3 0,1 1,4.6 0a2.3,2.3 0,1 1,-4.6 0" />
+        android:fillColor="#4A2511"
+        android:pathData="M36.5,38.5m-2.4,0a2.4,2.4 0,1 1,4.8 0a2.4,2.4 0,1 1,-4.8 0" />
     <path
-        android:fillColor="#FF8C6548"
-        android:pathData="M34.5,46m-1.6,0a1.6,1.6 0,1 1,3.2 0a1.6,1.6 0,1 1,-3.2 0" />
+        android:fillColor="#4A2511"
+        android:pathData="M30,40.5m-1.9,0a1.9,1.9 0,1 1,3.8 0a1.9,1.9 0,1 1,-3.8 0" />
     <path
-        android:fillColor="#FF9E7656"
-        android:pathData="M50,44m-1.9,0a1.9,1.9 0,1 1,3.8 0a1.9,1.9 0,1 1,-3.8 0" />
+        android:fillColor="#4A2511"
+        android:pathData="M43,40m-2.1,0a2.1,2.1 0,1 1,4.2 0a2.1,2.1 0,1 1,-4.2 0" />
 
-    <!-- 右下斜放：三色团子 🍡 的竹签（左上往右下斜45度） -->
+    <!-- 右下方错开位置的三色团子（角度改变，竹签绝不指向曲奇） -->
     <path
-        android:strokeColor="#FFD2B48C"
-        android:strokeWidth="2.4"
+        android:strokeColor="#C29B61"
+        android:strokeWidth="2.6"
         android:strokeLineCap="round"
-        android:pathData="M51,51 L78,78" />
+        android:pathData="M59,46 L75,78" />
 
-    <!-- 第三颗团子（右下：淡抹茶绿） -->
+    <!-- 樱花粉团子 -->
     <path
-        android:fillColor="#FFCFE3C8"
-        android:pathData="M70.5,70.5m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+        android:fillColor="#F497A9"
+        android:pathData="M61.5,51m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+    <path
+        android:fillColor="#FFD4DC"
+        android:pathData="M59.3,48.6m-2,0a2,2 0,1 1,4 0a2,2 0,1 1,-4 0" />
 
-    <!-- 第二颗团子（中间：奶糯白） -->
+    <!-- 奶白团子 -->
     <path
-        android:fillColor="#FFFFFBF5"
-        android:pathData="M63,63m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+        android:fillColor="#FFFDF9"
+        android:pathData="M66.5,61m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
 
-    <!-- 第一颗团子（左上靠曲奇：淡樱花粉） -->
+    <!-- 抹茶绿团子 -->
     <path
-        android:fillColor="#FFF7CFD6"
-        android:pathData="M55.5,55.5m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
+        android:fillColor="#88C48B"
+        android:pathData="M71.5,71m-6.8,0a6.8,6.8 0,1 1,13.6 0a6.8,6.8 0,1 1,-13.6 0" />
 </vector>
