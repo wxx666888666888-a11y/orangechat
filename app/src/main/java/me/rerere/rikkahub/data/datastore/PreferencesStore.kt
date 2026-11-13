@@ -466,7 +466,7 @@ data class DisplaySetting(
     val assistantBubbleImagePath: String = "",
     val bubbleCornerRadius: Float = 16f,
     val bubbleImageOverlayEnabled: Boolean = false,
-    // 新增：KE / 北极星多形态毛玻璃 & 头像形状大小 & 本窗口无损压缩开关
+    // KE / 北极星多形态毛玻璃 & 头像形状大小 & 本窗口无损压缩开关
     val bubbleGlassStyle: Int = 0,           // 0=橘瓣原版, 1=KE清透毛玻璃, 2=北极星柔光磨砂
     val bubbleBlurRadius: Float = 16f,       // 气泡毛玻璃模糊半径 (dp)
     val bubbleBorderWidth: Float = 0.8f,     // 气泡高光边框宽度 (dp)
@@ -474,6 +474,15 @@ data class DisplaySetting(
     val avatarShapeMode: Int = 0,            // 0=圆形, 1=方圆形, 2=方形
     val avatarSizeDp: Float = 36f,           // 头像大小 (dp)
     val compressInPlaceMode: Boolean = true, // true=本窗口插入摘要分割线(保留前文可撤回), false=原版替换
+    // 新增：三改专属清透美化独立开关组
+    val compactTopBarIcons: Boolean = true,          // 1. 顶部栏右侧4图标适度缩小(完整显露左侧模型名)
+    val glassTallCapsuleInput: Boolean = false,      // 2. 极简毛玻璃高胶囊输入框(打字回车往下拉高+纸飞机发送)
+    val cleanMergeCustomInputBg: Boolean = true,     // 3. 原版双层输入框去灰清透融合+去掉三个小圆点+纸飞机发送
+    val dynamicToAssistantHint: Boolean = true,      // 4. 输入框提示词动态改为 "to 助手名"
+    val floatingAiTextMode: Boolean = false,         // 5. AI气泡隐形悬浮模式
+    val wallpaperBlurRadius: Float = 0f,             // 6. 聊天自定义壁纸磨砂模糊半径 (0~20dp)
+    val softDustyPinkDanger: Boolean = true,         // 7. 删除键与停止生成键刺眼红替换为柔和低饱和豆沙淡粉
+    val skipRegenerateConfirm: Boolean = true,       // 8. 重新生成免二次确认弹窗
 )
 
 @Serializable
