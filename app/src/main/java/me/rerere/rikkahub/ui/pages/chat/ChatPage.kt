@@ -10,12 +10,14 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -50,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -275,6 +278,8 @@ private fun ChatPageContent(
     var previewMode by rememberSaveable { mutableStateOf(false) }
     var showBatchDeleteDialog by rememberSaveable { mutableStateOf(false) }
     val hazeState = rememberHazeState()
+    val display = setting.displaySetting
+    val dangerTextColor = if (display.softDustyPinkDanger) Color(0xFFB86B77) else MaterialTheme.colorScheme.error
 
     TTSAutoPlay(vm = vm, setting = setting, conversation = conversation)
 
@@ -361,7 +366,7 @@ private fun ChatPageContent(
                         showBatchDeleteDialog = false
                     }
                 ) {
-                    Text("删除所选", color = MaterialTheme.colorScheme.error)
+                    Text("删除所选", color = dangerTextColor)
                 }
             },
             dismissButton = {
@@ -376,7 +381,19 @@ private fun ChatPageContent(
         color = MaterialTheme.colorScheme.background,
         modifier = Modifier.fillMaxSize()
     ) {
-        AssistantBackground(setting = setting)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .let { mod ->
+                    if (display.wallpaperBlurRadius > 0.5f) {
+                        mod.blur(display.wallpaperBlurRadius.dp)
+                    } else {
+                        mod
+                    }
+                }
+        ) {
+            AssistantBackground(setting = setting)
+        }
         Scaffold(
             topBar = {
                 TopBar(
@@ -606,6 +623,9 @@ private fun TopBar(
     val titleState = useEditState<String> {
         onUpdateTitle(it)
     }
+    val compactIcons = settings.displaySetting.compactTopBarIcons
+    val btnModifier = if (compactIcons) Modifier.size(36.dp) else Modifier
+    val iconModifier = if (compactIcons) Modifier.size(20.5.dp) else Modifier
 
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
@@ -649,7 +669,7 @@ private fun TopBar(
                             maxLines = 1,
                             color = LocalContentColor.current.copy(0.65f),
                             style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 8.sp,
+                                fontSize = if (compactIcons) 9.5.sp else 8.sp,
                             )
                         )
                     }
@@ -657,38 +677,44 @@ private fun TopBar(
             }
         },
         actions = {
-            if (conversation.messageNodes.isNotEmpty()) {
-                IconButton(
-                    onClick = {
-                        onBatchDeleteClick()
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(if (compactIcons) 2.dp else 0.dp),
+                modifier = if (compactIcons) Modifier.padding(end = 4.dp) else Modifier
+            ) {
+                if (conversation.messageNodes.isNotEmpty()) {
+                    IconButton(
+                        onClick = { onBatchDeleteClick() },
+                        modifier = btnModifier
+                    ) {
+                        Icon(HugeIcons.Delete01, "Batch Delete", modifier = iconModifier)
                     }
+                }
+
+                IconButton(
+                    onClick = { onVoiceCall() },
+                    modifier = btnModifier
                 ) {
-                    Icon(HugeIcons.Delete01, "Batch Delete")
+                    Icon(HugeIcons.Voice, "Voice Call", modifier = iconModifier)
                 }
-            }
 
-            IconButton(
-                onClick = {
-                    onVoiceCall()
+                IconButton(
+                    onClick = { onClickMenu() },
+                    modifier = btnModifier
+                ) {
+                    Icon(
+                        if (previewMode) HugeIcons.Cancel01 else HugeIcons.LeftToRightListBullet,
+                        "Chat Options",
+                        modifier = iconModifier
+                    )
                 }
-            ) {
-                Icon(HugeIcons.Voice, "Voice Call")
-            }
 
-            IconButton(
-                onClick = {
-                    onClickMenu()
+                IconButton(
+                    onClick = { onNewChat() },
+                    modifier = btnModifier
+                ) {
+                    Icon(HugeIcons.MessageAdd01, "New Message", modifier = iconModifier)
                 }
-            ) {
-                Icon(if (previewMode) HugeIcons.Cancel01 else HugeIcons.LeftToRightListBullet, "Chat Options")
-            }
-
-            IconButton(
-                onClick = {
-                    onNewChat()
-                }
-            ) {
-                Icon(HugeIcons.MessageAdd01, "New Message")
             }
         },
     )
