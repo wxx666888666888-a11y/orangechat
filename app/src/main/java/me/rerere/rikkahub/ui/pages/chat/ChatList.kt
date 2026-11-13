@@ -131,6 +131,7 @@ private fun ChatListNormal(
     val conversationUpdated by rememberUpdatedState(conversation)
     val density = LocalDensity.current
     val activity = LocalContext.current as? me.rerere.rikkahub.RouteActivity
+    val dangerIconColor = if (settings.displaySetting.softDustyPinkDanger) Color(0xFFB86B77) else MaterialTheme.colorScheme.error
 
     DisposableEffect(Unit) {
         val listener: (Boolean) -> Boolean = { isVolumeUp ->
@@ -279,7 +280,7 @@ private fun ChatListNormal(
                             selecting = false
                             selectedItems.clear()
                         }) {
-                            Icon(HugeIcons.Delete02, contentDescription = "Batch Delete", tint = MaterialTheme.colorScheme.error)
+                            Icon(HugeIcons.Delete02, contentDescription = "Batch Delete", tint = dangerIconColor)
                         }
                     }
                     Tooltip(tooltip = { Text("导出分享") }) {
@@ -436,7 +437,7 @@ private fun BoxScope.MessageJumper(show: Boolean, onLeft: Boolean, scope: Corout
             Surface(onClick = { scope.launch { state.animateScrollToItem(state.firstVisibleItemIndex + 1) } }, shape = CircleShape, color = bg) {
                 Icon(HugeIcons.ArrowDown01, null, Modifier.padding(4.dp))
             }
-            Surface(onClick = { scope.launch { state.scrollToItem(state.layoutInfo.totalItemsCount - 1) } }, shape = CircleShape, color = bg) {
+            Surface(onClick = { scope.launch { state.scrollToItem(state.layoutInfo.totalItemsCount - 1) } }, shape = CircleShape, tonalElevation = 4.dp, color = bg) {
                 Icon(HugeIcons.ArrowDownDouble, stringResource(R.string.chat_page_scroll_to_bottom), Modifier.padding(4.dp))
             }
         }
