@@ -1,4 +1,4 @@
-﻿/*
+/*
  * 橘瓣 OrangeChat
  * 衍生自 RikkaHub (https://github.com/rikkahub/rikkahub)，原作者 RE
  * 本项目基于 GNU AGPL v3 开源，详见根目录 LICENSE 文件
@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -81,6 +82,7 @@ fun ColumnScope.ChatMessageActionButtons(
     onClearTranslation: (UIMessage) -> Unit = {},
 ) {
     val context = LocalContext.current
+    val displaySettings = LocalDisplaySettings.current
     var isPendingDelete by remember { mutableStateOf(false) }
     var showTranslateDialog by remember { mutableStateOf(false) }
     var showRegenerateConfirm by remember { mutableStateOf(false) }
@@ -112,7 +114,9 @@ fun ColumnScope.ChatMessageActionButtons(
             modifier = Modifier
                 .clip(CircleShape)
                 .clickable {
-                    if (message.role == MessageRole.USER) {
+                    if (displaySettings.skipRegenerateConfirm) {
+                        onRegenerate()
+                    } else if (message.role == MessageRole.USER) {
                         showRegenerateConfirm = true
                     } else {
                         onRegenerate()
@@ -124,7 +128,6 @@ fun ColumnScope.ChatMessageActionButtons(
 
         if (message.role == MessageRole.ASSISTANT) {
             val tts = LocalTTSState.current
-            val displaySettings = LocalDisplaySettings.current
             val isSpeaking by tts.isSpeaking.collectAsState()
             val isAvailable by tts.isAvailable.collectAsState()
             Icon(
@@ -243,6 +246,11 @@ fun ChatMessageActionsSheet(
     onWebViewPreview: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    val displaySettings = LocalDisplaySettings.current
+    val useSoftPink = displaySettings.softDustyPinkDanger
+    val deleteContainerColor = if (useSoftPink) Color(0xFFEEBEC6).copy(alpha = 0.35f) else MaterialTheme.colorScheme.errorContainer
+    val deleteContentColor = if (useSoftPink) Color(0xFFA85865) else MaterialTheme.colorScheme.onErrorContainer
+
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -433,7 +441,8 @@ fun ChatMessageActionsSheet(
                 },
                 shape = MaterialTheme.shapes.medium,
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.errorContainer
+                    containerColor = deleteContainerColor,
+                    contentColor = deleteContentColor
                 )
             ) {
                 Row(
@@ -446,10 +455,12 @@ fun ChatMessageActionsSheet(
                     Icon(
                         imageVector = HugeIcons.Delete01,
                         contentDescription = null,
+                        tint = deleteContentColor,
                         modifier = Modifier.padding(4.dp)
                     )
                     Text(
                         text = stringResource(R.string.delete),
+                        color = deleteContentColor,
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
