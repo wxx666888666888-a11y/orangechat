@@ -9,41 +9,61 @@ package me.rerere.rikkahub.ui.pages.setting
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFlexibleTopAppBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil3.compose.AsyncImage
 import me.rerere.hugeicons.HugeIcons
 import me.rerere.hugeicons.stroke.AiMagic
 import me.rerere.hugeicons.stroke.Alert01
@@ -68,10 +88,12 @@ import me.rerere.hugeicons.stroke.Settings03
 import me.rerere.hugeicons.stroke.Share04
 import me.rerere.hugeicons.stroke.Shield02
 import me.rerere.hugeicons.stroke.SmartPhone01
+import me.rerere.hugeicons.stroke.Sparkles
 import me.rerere.hugeicons.stroke.Sun01
 import me.rerere.hugeicons.stroke.WavingHand01
 import me.rerere.rikkahub.R
 import me.rerere.rikkahub.Screen
+import me.rerere.rikkahub.data.datastore.DisplaySetting
 import me.rerere.rikkahub.data.datastore.isNotConfigured
 import me.rerere.rikkahub.data.files.FilesManager
 import me.rerere.rikkahub.ui.components.nav.BackButton
@@ -89,13 +111,19 @@ import me.rerere.rikkahub.utils.openUrl
 import me.rerere.rikkahub.utils.plus
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingPage(vm: SettingVM = koinViewModel()) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val navController = LocalNavController.current
     val settings by vm.settings.collectAsStateWithLifecycle()
     val filesManager: FilesManager = koinInject()
+    var showExclusiveBeautifySheet by remember { mutableStateOf(false) }
+
+    val display = settings.displaySetting
+    val bgImagePath = display.drawerBackgroundPath.ifBlank { display.inputBackgroundPath }
 
     if (settings.launchCount > 100 && (settings.launchCount - settings.sponsorAlertDismissedAt) >= 50) {
         AlertDialog(
@@ -123,319 +151,515 @@ fun SettingPage(vm: SettingVM = koinViewModel()) {
         )
     }
 
-    Scaffold(
-        topBar = {
-            LargeFlexibleTopAppBar(
-                title = {
-                    Text(text = stringResource(R.string.settings))
-                },
-                navigationIcon = {
-                    BackButton()
-                },
-                scrollBehavior = scrollBehavior,
-                actions = {
-                },
-                colors = CustomColors.topBarColors
+    if (showExclusiveBeautifySheet) {
+        ExclusiveBeautifyBottomSheet(
+            display = display,
+            onUpdateDisplay = { newDisplay ->
+                vm.updateSettings(settings.copy(displaySetting = newDisplay))
+            },
+            onDismiss = { showExclusiveBeautifySheet = false }
+        )
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // 如果设置了自定义背景图，设置页底层透出柔化磨砂壁纸，告别生硬死白底
+        if (bgImagePath.isNotBlank()) {
+            AsyncImage(
+                model = bgImagePath,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(24.dp)
+                    .alpha(0.32f)
             )
-        },
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        containerColor = CustomColors.topBarColors.containerColor
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = innerPadding + PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            if (settings.isNotConfigured()) {
-                item {
-                    ProviderConfigWarningCard(navController)
-                }
-            }
+        }
 
-            item("generalSettings") {
-                var colorMode by rememberColorMode()
-                val selectedColorModeText = when (colorMode) {
-                    ColorMode.SYSTEM -> stringResource(R.string.setting_page_color_mode_system)
-                    ColorMode.LIGHT -> stringResource(R.string.setting_page_color_mode_light)
-                    ColorMode.DARK -> stringResource(R.string.setting_page_color_mode_dark)
+        Scaffold(
+            topBar = {
+                LargeFlexibleTopAppBar(
+                    title = {
+                        Text(text = stringResource(R.string.settings))
+                    },
+                    navigationIcon = {
+                        BackButton()
+                    },
+                    scrollBehavior = scrollBehavior,
+                    actions = {
+                    },
+                    colors = if (bgImagePath.isNotBlank()) {
+                        TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.72f)
+                        )
+                    } else {
+                        CustomColors.topBarColors
+                    }
+                )
+            },
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = if (bgImagePath.isNotBlank()) {
+                MaterialTheme.colorScheme.surface.copy(alpha = 0.68f)
+            } else {
+                CustomColors.topBarColors.containerColor
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = innerPadding + PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                if (settings.isNotConfigured()) {
+                    item {
+                        ProviderConfigWarningCard(navController)
+                    }
                 }
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text(stringResource(R.string.setting_page_general_settings)) },
-                ) {
-                    item(
-                        leadingContent = { Icon(HugeIcons.Sun01, null) },
-                        trailingContent = {
-                            Select(
-                                options = ColorMode.entries,
-                                selectedOption = colorMode,
-                                onOptionSelected = {
-                                    colorMode = it
-                                    navController.navigate(Screen.Setting) {
-                                        popUpTo(Screen.Setting) {
-                                            inclusive = true
+
+                item("generalSettings") {
+                    var colorMode by rememberColorMode()
+                    val selectedColorModeText = when (colorMode) {
+                        ColorMode.SYSTEM -> stringResource(R.string.setting_page_color_mode_system)
+                        ColorMode.LIGHT -> stringResource(R.string.setting_page_color_mode_light)
+                        ColorMode.DARK -> stringResource(R.string.setting_page_color_mode_dark)
+                    }
+                    CardGroup(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        title = { Text(stringResource(R.string.setting_page_general_settings)) },
+                    ) {
+                        item(
+                            leadingContent = { Icon(HugeIcons.Sun01, null) },
+                            trailingContent = {
+                                Select(
+                                    options = ColorMode.entries,
+                                    selectedOption = colorMode,
+                                    onOptionSelected = {
+                                        colorMode = it
+                                        navController.navigate(Screen.Setting) {
+                                            popUpTo(Screen.Setting) {
+                                                inclusive = true
+                                            }
                                         }
-                                    }
-                                },
-                                optionToString = {
-                                    when (it) {
-                                        ColorMode.SYSTEM -> stringResource(R.string.setting_page_color_mode_system)
-                                        ColorMode.LIGHT -> stringResource(R.string.setting_page_color_mode_light)
-                                        ColorMode.DARK -> stringResource(R.string.setting_page_color_mode_dark)
-                                    }
-                                },
-                                modifier = Modifier.width(150.dp)
-                            )
-                        },
-                        headlineContent = { Text(stringResource(R.string.setting_page_color_mode)) },
-                        supportingContent = { Text(selectedColorModeText) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingDisplay) },
-                        leadingContent = { Icon(HugeIcons.Settings03, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_display_setting_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_display_setting)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingPlugins) },
-                        leadingContent = { Icon(HugeIcons.Package, null) },
-                        supportingContent = { Text("管理本地插件，导入ZIP插件包") },
-                        headlineContent = { Text("插件管理") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingSecurity) },
-                        leadingContent = { Icon(HugeIcons.Shield02, null) },
-                        supportingContent = { Text("工具调用确认、自动批准、工作流拦截等安全选项") },
-                        headlineContent = { Text("安全设置") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.Assistant) },
-                        leadingContent = { Icon(HugeIcons.LookTop, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_assistant_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_assistant)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.Extensions) },
-                        leadingContent = { Icon(HugeIcons.Package, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_extensions_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_extensions)) },
-                    )
-                }
-            }
-
-            item("modelServices") {
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text(stringResource(R.string.setting_page_model_and_services)) },
-                ) {
-                    item(
-                        onClick = { navController.navigate(Screen.SettingModels) },
-                        leadingContent = { Icon(HugeIcons.AiMagic, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_default_model_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_default_model)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingProvider) },
-                        leadingContent = { Icon(HugeIcons.Brain02, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_providers_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_providers)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingSearch) },
-                        leadingContent = { Icon(HugeIcons.GlobalSearch, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_search_service_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_search_service)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingSpeech) },
-                        leadingContent = { Icon(HugeIcons.Megaphone01, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_tts_service_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_tts_service)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingMcp) },
-                        leadingContent = { Icon(HugeIcons.McpServer, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_mcp_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_mcp)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingWeb) },
-                        leadingContent = { Icon(HugeIcons.ServerStack01, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_web_server_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_web_server)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingSystemTools) },
-                        leadingContent = { Icon(HugeIcons.SmartPhone01, null) },
-                        supportingContent = { Text("位置、通知、日历、闹钟等系统工具") },
-                        headlineContent = { Text("系统工具") },
-                    )
-                    item(
-                        onClick = {
-                            ProactivePageEntryHolder.initialSection = 0
-                            navController.navigate(Screen.SettingProactiveMessage)
-                        },
-                        leadingContent = { Icon(HugeIcons.WavingHand01, null) },
-                        supportingContent = { Text("AI 在设定间隔内主动发消息，有记忆有上下文") },
-                        headlineContent = { Text("主动消息") },
-                    )
-                    item(
-                        onClick = {
-                            ProactivePageEntryHolder.initialSection = 1
-                            navController.navigate(Screen.SettingProactiveMessage)
-                        },
-                        leadingContent = { Icon(HugeIcons.Clock01, null) },
-                        supportingContent = { Text("定点几时几分、每周几、隐形指令、指定窗口触发") },
-                        headlineContent = { Text("定时任务闹钟") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingWeixinBot) },
-                        leadingContent = { Icon(HugeIcons.MessageMultiple01, null) },
-                        supportingContent = { Text("把微信号变成 AI 入口，扫码登录后用微信收发消息") },
-                        headlineContent = { Text("微信 Bot") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingQqBot) },
-                        leadingContent = { Icon(HugeIcons.Message01, null) },
-                        supportingContent = { Text("填 AppID/Secret，用 QQ 私聊跟 AI 对话") },
-                        headlineContent = { Text("QQ Bot") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.Workflows) },
-                        leadingContent = { Icon(HugeIcons.SmartPhone01, null) },
-                        supportingContent = { Text("Tasker 风格自动化：触发器 + 条件 -> 执行动作，由 AI 编写") },
-                        headlineContent = { Text("工作流") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.Health) },
-                        leadingContent = { Icon(HugeIcons.Pulse01, null) },
-                        supportingContent = { Text("Gadgetbridge 健康数据查看") },
-                        headlineContent = { Text("健康数据") },
-                    )
-                }
-            }
-
-            item("dataSettings") {
-                val storageState by produceState(-1 to 0L) {
-                    value = filesManager.countChatFiles()
-                }
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text(stringResource(R.string.setting_page_data_settings)) },
-                ) {
-                    item(
-                        onClick = { navController.navigate(Screen.Backup) },
-                        leadingContent = { Icon(HugeIcons.Database02, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_data_backup_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_data_backup)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingFiles) },
-                        leadingContent = { Icon(HugeIcons.ImageUpload, null) },
-                        supportingContent = {
-                            if (storageState.first == -1) {
-                                Text(stringResource(R.string.calculating))
-                            } else {
-                                Text(
-                                    stringResource(
-                                        R.string.setting_page_chat_storage_desc,
-                                        storageState.first,
-                                        storageState.second / 1024 / 1024.0
-                                    )
+                                    },
+                                    optionToString = {
+                                        when (it) {
+                                            ColorMode.SYSTEM -> stringResource(R.string.setting_page_color_mode_system)
+                                            ColorMode.LIGHT -> stringResource(R.string.setting_page_color_mode_light)
+                                            ColorMode.DARK -> stringResource(R.string.setting_page_color_mode_dark)
+                                        }
+                                    },
+                                    modifier = Modifier.width(150.dp)
                                 )
-                            }
-                        },
-                        headlineContent = { Text(stringResource(R.string.setting_page_chat_storage)) },
-                    )
+                            },
+                            headlineContent = { Text(stringResource(R.string.setting_page_color_mode)) },
+                            supportingContent = { Text(selectedColorModeText) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingDisplay) },
+                            leadingContent = { Icon(HugeIcons.Settings03, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_display_setting_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_display_setting)) },
+                        )
+                        // 新增：位于显示设置正下方的「专属美化」独立入口
+                        item(
+                            onClick = { showExclusiveBeautifySheet = true },
+                            leadingContent = { Icon(HugeIcons.Sparkles, null) },
+                            supportingContent = { Text("高胶囊/去灰清透输入框、顶栏精简、豆沙粉、免确认重发等独立开关") },
+                            headlineContent = { Text("专属美化") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingPlugins) },
+                            leadingContent = { Icon(HugeIcons.Package, null) },
+                            supportingContent = { Text("管理本地插件，导入ZIP插件包") },
+                            headlineContent = { Text("插件管理") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingSecurity) },
+                            leadingContent = { Icon(HugeIcons.Shield02, null) },
+                            supportingContent = { Text("工具调用确认、自动批准、工作流拦截等安全选项") },
+                            headlineContent = { Text("安全设置") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.Assistant) },
+                            leadingContent = { Icon(HugeIcons.LookTop, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_assistant_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_assistant)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.Extensions) },
+                            leadingContent = { Icon(HugeIcons.Package, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_extensions_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_extensions)) },
+                        )
+                    }
                 }
-            }
 
-            item("aboutSettings") {
-                val context = LocalContext.current
-                val shareText = stringResource(R.string.setting_page_share_text)
-                val share = stringResource(R.string.setting_page_share)
-                val noShareApp = stringResource(R.string.setting_page_no_share_app)
-                CardGroup(
-                    modifier = Modifier.padding(horizontal = 8.dp),
-                    title = { Text(stringResource(R.string.setting_page_about)) },
-                ) {
-                    item(
-                        onClick = { navController.navigate(Screen.SettingAbout) },
-                        leadingContent = { Icon(HugeIcons.Clapping01, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_about_desc)) },
-                        trailingContent = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                IconButton(
-                                    onClick = {
-                                        context.joinQQGroup("Qsm0whzbPsm1UyNpR683ulLyMZ2Pqrw0")
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = TencentQQIcon,
-                                        contentDescription = "QQ",
-                                        tint = MaterialTheme.colorScheme.secondary
+                item("modelServices") {
+                    CardGroup(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        title = { Text(stringResource(R.string.setting_page_model_and_services)) },
+                    ) {
+                        item(
+                            onClick = { navController.navigate(Screen.SettingModels) },
+                            leadingContent = { Icon(HugeIcons.AiMagic, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_default_model_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_default_model)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingProvider) },
+                            leadingContent = { Icon(HugeIcons.Brain02, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_providers_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_providers)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingSearch) },
+                            leadingContent = { Icon(HugeIcons.GlobalSearch, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_search_service_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_search_service)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingSpeech) },
+                            leadingContent = { Icon(HugeIcons.Megaphone01, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_tts_service_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_tts_service)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingMcp) },
+                            leadingContent = { Icon(HugeIcons.McpServer, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_mcp_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_mcp)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingWeb) },
+                            leadingContent = { Icon(HugeIcons.ServerStack01, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_web_server_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_web_server)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingSystemTools) },
+                            leadingContent = { Icon(HugeIcons.SmartPhone01, null) },
+                            supportingContent = { Text("位置、通知、日历、闹钟等系统工具") },
+                            headlineContent = { Text("系统工具") },
+                        )
+                        item(
+                            onClick = {
+                                ProactivePageEntryHolder.initialSection = 0
+                                navController.navigate(Screen.SettingProactiveMessage)
+                            },
+                            leadingContent = { Icon(HugeIcons.WavingHand01, null) },
+                            supportingContent = { Text("AI 在设定间隔内主动发消息，有记忆有上下文") },
+                            headlineContent = { Text("主动消息") },
+                        )
+                        item(
+                            onClick = {
+                                ProactivePageEntryHolder.initialSection = 1
+                                navController.navigate(Screen.SettingProactiveMessage)
+                            },
+                            leadingContent = { Icon(HugeIcons.Clock01, null) },
+                            supportingContent = { Text("定点几时几分、每周几、隐形指令、指定窗口触发") },
+                            headlineContent = { Text("定时任务闹钟") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingWeixinBot) },
+                            leadingContent = { Icon(HugeIcons.MessageMultiple01, null) },
+                            supportingContent = { Text("把微信号变成 AI 入口，扫码登录后用微信收发消息") },
+                            headlineContent = { Text("微信 Bot") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingQqBot) },
+                            leadingContent = { Icon(HugeIcons.Message01, null) },
+                            supportingContent = { Text("填 AppID/Secret，用 QQ 私聊跟 AI 对话") },
+                            headlineContent = { Text("QQ Bot") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.Workflows) },
+                            leadingContent = { Icon(HugeIcons.SmartPhone01, null) },
+                            supportingContent = { Text("Tasker 风格自动化：触发器 + 条件 -> 执行动作，由 AI 编写") },
+                            headlineContent = { Text("工作流") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.Health) },
+                            leadingContent = { Icon(HugeIcons.Pulse01, null) },
+                            supportingContent = { Text("Gadgetbridge 健康数据查看") },
+                            headlineContent = { Text("健康数据") },
+                        )
+                    }
+                }
+
+                item("dataSettings") {
+                    val storageState by produceState(-1 to 0L) {
+                        value = filesManager.countChatFiles()
+                    }
+                    CardGroup(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        title = { Text(stringResource(R.string.setting_page_data_settings)) },
+                    ) {
+                        item(
+                            onClick = { navController.navigate(Screen.Backup) },
+                            leadingContent = { Icon(HugeIcons.Database02, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_data_backup_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_data_backup)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingFiles) },
+                            leadingContent = { Icon(HugeIcons.ImageUpload, null) },
+                            supportingContent = {
+                                if (storageState.first == -1) {
+                                    Text(stringResource(R.string.calculating))
+                                } else {
+                                    Text(
+                                        stringResource(
+                                            R.string.setting_page_chat_storage_desc,
+                                            storageState.first,
+                                            storageState.second / 1024 / 1024.0
+                                        )
                                     )
                                 }
-                                IconButton(
-                                    onClick = {
-                                        context.openUrl("https://discord.gg/9weBqxe5c4")
-                                    }
+                            },
+                            headlineContent = { Text(stringResource(R.string.setting_page_chat_storage)) },
+                        )
+                    }
+                }
+
+                item("aboutSettings") {
+                    val context = LocalContext.current
+                    val shareText = stringResource(R.string.setting_page_share_text)
+                    val share = stringResource(R.string.setting_page_share)
+                    val noShareApp = stringResource(R.string.setting_page_no_share_app)
+                    CardGroup(
+                        modifier = Modifier.padding(horizontal = 8.dp),
+                        title = { Text(stringResource(R.string.setting_page_about)) },
+                    ) {
+                        item(
+                            onClick = { navController.navigate(Screen.SettingAbout) },
+                            leadingContent = { Icon(HugeIcons.Clapping01, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_about_desc)) },
+                            trailingContent = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = DiscordIcon,
-                                        contentDescription = "Discord",
-                                        tint = MaterialTheme.colorScheme.secondary
-                                    )
+                                    IconButton(
+                                        onClick = {
+                                            context.joinQQGroup("Qsm0whzbPsm1UyNpR683ulLyMZ2Pqrw0")
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = TencentQQIcon,
+                                            contentDescription = "QQ",
+                                            tint = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            context.openUrl("https://discord.gg/9weBqxe5c4")
+                                        }
+                                    ) {
+                                        Icon(
+                                            imageVector = DiscordIcon,
+                                            contentDescription = "Discord",
+                                            tint = MaterialTheme.colorScheme.secondary
+                                        )
+                                    }
                                 }
-                            }
-                        },
-                        headlineContent = { Text(stringResource(R.string.setting_page_about)) },
-                    )
-                    item(
-                        onClick = { context.openUrl("https://github.com/sue1231513/orangechat") },
-                        leadingContent = { Icon(HugeIcons.Book01, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_documentation_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_documentation)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.Log) },
-                        leadingContent = { Icon(HugeIcons.Bookshelf01, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_request_logs_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_request_logs)) },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SecurityAudit) },
-                        leadingContent = { Icon(HugeIcons.Alert01, null) },
-                        supportingContent = { Text("查看插件安装、工作流拦截、敏感操作等安全事件记录") },
-                        headlineContent = { Text("安全审计日志") },
-                    )
-                    item(
-                        onClick = { navController.navigate(Screen.SettingDonate) },
-                        leadingContent = { Icon(HugeIcons.InLove, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_donate_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_donate)) },
-                    )
-                    item(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_SEND)
-                            intent.type = "text/plain"
-                            intent.putExtra(Intent.EXTRA_TEXT, shareText)
-                            try {
-                                context.startActivity(Intent.createChooser(intent, share))
-                            } catch (e: ActivityNotFoundException) {
-                                Toast.makeText(context, noShareApp, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        leadingContent = { Icon(HugeIcons.Share04, null) },
-                        supportingContent = { Text(stringResource(R.string.setting_page_share_desc)) },
-                        headlineContent = { Text(stringResource(R.string.setting_page_share)) },
-                    )
+                            },
+                            headlineContent = { Text(stringResource(R.string.setting_page_about)) },
+                        )
+                        item(
+                            onClick = { context.openUrl("https://github.com/sue1231513/orangechat") },
+                            leadingContent = { Icon(HugeIcons.Book01, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_documentation_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_documentation)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.Log) },
+                            leadingContent = { Icon(HugeIcons.Bookshelf01, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_request_logs_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_request_logs)) },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SecurityAudit) },
+                            leadingContent = { Icon(HugeIcons.Alert01, null) },
+                            supportingContent = { Text("查看插件安装、工作流拦截、敏感操作等安全事件记录") },
+                            headlineContent = { Text("安全审计日志") },
+                        )
+                        item(
+                            onClick = { navController.navigate(Screen.SettingDonate) },
+                            leadingContent = { Icon(HugeIcons.InLove, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_donate_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_donate)) },
+                        )
+                        item(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_SEND)
+                                intent.type = "text/plain"
+                                intent.putExtra(Intent.EXTRA_TEXT, shareText)
+                                try {
+                                    context.startActivity(Intent.createChooser(intent, share))
+                                } catch (e: ActivityNotFoundException) {
+                                    Toast.makeText(context, noShareApp, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            leadingContent = { Icon(HugeIcons.Share04, null) },
+                            supportingContent = { Text(stringResource(R.string.setting_page_share_desc)) },
+                            headlineContent = { Text(stringResource(R.string.setting_page_share)) },
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ExclusiveBeautifyBottomSheet(
+    display: DisplaySetting,
+    onUpdateDisplay: (DisplaySetting) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = "专属清透美化",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+
+            BeautifySwitchRow(
+                title = "顶栏右侧4按钮适度精简",
+                subtitle = "缩小一点右上角4个图标，让左上角助手与模型全称完整露出来，又不影响点击",
+                checked = display.compactTopBarIcons,
+                onCheckedChange = { onUpdateDisplay(display.copy(compactTopBarIcons = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "模式A：极简毛玻璃高胶囊输入框",
+                subtitle = "单层悬浮毛玻璃偏高胶囊，打字回车自动往下拉高，配简笔画纸飞机发送键",
+                checked = display.glassTallCapsuleInput,
+                onCheckedChange = { onUpdateDisplay(display.copy(glassTallCapsuleInput = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "模式B：原版输入框去灰清透融合",
+                subtitle = "保留原版双层结构与自定义输入框背景图，去掉内部死灰底块与三个小圆点",
+                checked = display.cleanMergeCustomInputBg,
+                onCheckedChange = { onUpdateDisplay(display.copy(cleanMergeCustomInputBg = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "输入框提示词改为 to + 助手名",
+                subtitle = "自动读取当前助手名字（例如显示 to 阿拓），切换或改名自动同步",
+                checked = display.dynamicToAssistantHint,
+                onCheckedChange = { onUpdateDisplay(display.copy(dynamicToAssistantHint = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "AI 气泡隐形悬浮模式",
+                subtitle = "开启后 AI 回复背景完全透明悬浮于壁纸之上；关闭则使用原版/毛玻璃气泡",
+                checked = display.floatingAiTextMode,
+                onCheckedChange = { onUpdateDisplay(display.copy(floatingAiTextMode = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "柔和豆沙淡粉替代刺眼红",
+                subtitle = "将底部删除按钮、停止生成取消按钮的刺眼正红替换为低饱和温柔灰粉豆沙色",
+                checked = display.softDustyPinkDanger,
+                onCheckedChange = { onUpdateDisplay(display.copy(softDustyPinkDanger = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            BeautifySwitchRow(
+                title = "重新生成免二次确认",
+                subtitle = "开启后点击重新生成直接重发，不再每次弹出确认弹窗",
+                checked = display.skipRegenerateConfirm,
+                onCheckedChange = { onUpdateDisplay(display.copy(skipRegenerateConfirm = it)) }
+            )
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "聊天自定义壁纸磨砂模糊度",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = "${display.wallpaperBlurRadius.roundToInt()} dp",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Slider(
+                    value = display.wallpaperBlurRadius,
+                    onValueChange = { onUpdateDisplay(display.copy(wallpaperBlurRadius = it)) },
+                    valueRange = 0f..20f
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun BeautifySwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(end = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange
+        )
     }
 }
 
