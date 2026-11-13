@@ -1,3 +1,4 @@
+
 package me.rerere.rikkahub.ui.components.message
 
 import android.content.Intent
@@ -325,7 +326,9 @@ private fun MessagePartsBlock(
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         segs.fastForEachIndexed { i, seg ->
                                             key(i) {
-                                                if (ds.showAssistantBubble || ds.bubbleGlassStyle != 0) {
+                                                // 开启「AI 气泡隐形悬浮模式」时，强制不套气泡底框，完全透明悬浮在壁纸上
+                                                val useAiBubble = !ds.floatingAiTextMode && (ds.showAssistantBubble || ds.bubbleGlassStyle != 0)
+                                                if (useAiBubble) {
                                                     BubbleSurface(ds.assistantBubbleImagePath, ds.bubbleCornerRadius.dp, aiColor, ds.bubbleImageOverlayEnabled, bubbleAlpha) {
                                                         MarkdownBlock(content = seg.replaceRegexes(assistant, AssistantAffectScope.ASSISTANT, true), onClickCitation = handleClickCitation)
                                                     }
