@@ -559,9 +559,9 @@ fun ChatInput(
                     }
 
                     if (useTallCapsule) {
-                        // ==================== 模式A：极简毛玻璃高胶囊（回车自动往下拉高） ====================
+                        // ==================== 模式A：极简毛玻璃高胶囊（左侧选模型 + 加号，回车自动往下拉高） ====================
                         Column(
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             if (state.messageContent.isNotEmpty()) {
@@ -572,19 +572,39 @@ fun ChatInput(
                                     .fillMaxWidth()
                                     .heightIn(min = 52.dp),
                                 verticalAlignment = Alignment.Bottom,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Box(
+                                // 左侧并排：模型选择器 + 加号按钮（尺寸均为30.dp，等大对齐不突兀）
+                                Row(
                                     modifier = Modifier.padding(bottom = 6.dp),
-                                    contentAlignment = Alignment.Center
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
+                                    Box(
+                                        modifier = Modifier.size(30.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        ModelSelector(
+                                            modelId = assistant.chatModelId ?: settings.chatModelId,
+                                            providers = settings.providers,
+                                            onSelect = {
+                                                onUpdateChatModel(it)
+                                                dismissExpand()
+                                            },
+                                            type = ModelType.CHAT,
+                                            onlyIcon = true,
+                                            modifier = Modifier.size(30.dp),
+                                        )
+                                    }
+
                                     ActionIconButton(
                                         onClick = { expandToggle(ExpandState.Files) }
                                     ) {
                                         Icon(
                                             imageVector = if (expand == ExpandState.Files) HugeIcons.Cancel01 else HugeIcons.Add01,
                                             contentDescription = stringResource(R.string.more_options),
-                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                                            modifier = Modifier.size(20.dp)
                                         )
                                     }
                                 }
