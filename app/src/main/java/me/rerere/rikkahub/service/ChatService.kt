@@ -374,39 +374,41 @@ class ChatService(
         }
     }
 
-            private suspend fun appendProactiveAiMessageUnderLock(conversationId: U
-uid, aiMessage: UIMessage) {
-        val session = getOrCreateSession(conversationId)
-        session.getJob
-()?.let { job -> if (job.isActive) job.join() }
-        session.saveMutex.
-withLock {
-            val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
-
-            
-            // 系统强制时间切割，防止模型续写幻觉
-            val timeGapNode = UIMessage(
-
-                role = MessageRole.SYSTEM, 
-                parts = listOf(UIMessagePart.Text(
-                    "【
-System Event: Time gap detected】\n" +
-                    "Current epoch time: ${System.currentTimeMillis()}\
-n" +
-                    "Instruction: Previous sequence ended. This is an independent proactive message."
-                ))
-            ).toMessageNode()
-
-
-            val updated = currentConversation.copy(
-                messageNodes = currentConversation.messageNodes + timeGapNode + aiMessage.
-toMessageNode(),
-                updateAt = Instant.now()
-            )
-            updateConversation(conversationId,
- updated)
-            saveConversation(conversationId, updated)
+            private suspend fun appendProactiveAiMessageUnderLock(
+    conversationId: Uuid,
+    aiMessage: UIMessage
+) {
+    val session = getOrCreateSession(conversationId)
+    session.getJob()?.let { job ->
+        if (job.isActive) job.join()
+    }
+    session.saveMutex.withLock {
+        val currentConversation =
+            conversationRepo.getConversationById(conversationId)
+                ?: session.state.value
+        val gapText = buildString {
+            append("[System Event: Time gap. ")
+            append("Current time: ")
+            append(System.currentTimeMillis())
+            append(". Independent proactive message, ")
+            append("do not fast-forward time.]")
         }
+        val gapMsg = UIMessage(
+            role = MessageRole.SYSTEM,
+            parts = listOf(UIMessagePart.Text(gapText))
+        )
+        val newNodes = buildList {
+            addAll(currentConversation.messageNodes)
+            add(gapMsg.toMessageNode())
+            add(aiMessage.toMessageNode())
+        }
+        val updated = currentConversation.copy(
+            messageNodes = newNodes,
+            updateAt = Instant.now()
+        )
+        updateConversation(conversationId, updated)
+        saveConversation(conversationId, updated)
+    }
             }
 
     fun notifyVoiceCallDeclined(conversationId: Uuid) {
