@@ -374,43 +374,40 @@ class ChatService(
         }
     }
 
-        private suspend fun
- appendProactiveAiMessageUnderLock(conversationId: Uuid, aiMessage: UIMessage) {
-        
-val session = getOrCreateSession(conversationId)
-        session.getJob()?.let { job -> if (
-job.isActive) job.join() }
-        session.saveMutex.withLock {
-            val currentConversation
- = conversationRepo.getConversationById(conversationId) ?: session.state.value
+            private suspend fun appendProactiveAiMessageUnderLock(conversationId: U
+uid, aiMessage: UIMessage) {
+        val session = getOrCreateSession(conversationId)
+        session.getJob
+()?.let { job -> if (job.isActive) job.join() }
+        session.saveMutex.
+withLock {
+            val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
+
             
-            // 明确
-给模型下达指令，这行字模型会看懂：这里是时间切割，不要延续上一段的
-剧情和时间
+            // 系统强制时间切割，防止模型续写幻觉
             val timeGapNode = UIMessage(
+
                 role = MessageRole.SYSTEM, 
-                parts
- = listOf(UIMessagePart.Text(
-                    "【系统强制时间切割】\n" +
-                    "
-当前时间戳: ${System.currentTimeMillis()}\n" +
-                    "指令: 上一段对话已经结束，此处
-为主动发送的独立消息。不要延续上一段的剧情，不要自发推演时间，请根据当下
-语境自然回复。"
+                parts = listOf(UIMessagePart.Text(
+                    "【
+System Event: Time gap detected】\n" +
+                    "Current epoch time: ${System.currentTimeMillis()}\
+n" +
+                    "Instruction: Previous sequence ended. This is an independent proactive message."
                 ))
             ).toMessageNode()
 
+
             val updated = currentConversation.copy(
-                
-messageNodes = currentConversation.messageNodes + timeGapNode + aiMessage.toMessageNode(),
-                updateAt
- = Instant.now()
+                messageNodes = currentConversation.messageNodes + timeGapNode + aiMessage.
+toMessageNode(),
+                updateAt = Instant.now()
             )
-            updateConversation(conversationId, updated)
-            saveConversation(conversationId, updated
-)
+            updateConversation(conversationId,
+ updated)
+            saveConversation(conversationId, updated)
         }
- }
+            }
 
     fun notifyVoiceCallDeclined(conversationId: Uuid) {
         appScope.launch(Dispatchers.IO) {
