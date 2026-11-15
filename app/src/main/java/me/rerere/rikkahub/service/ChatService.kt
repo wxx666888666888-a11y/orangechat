@@ -374,19 +374,43 @@ class ChatService(
         }
     }
 
-    private suspend fun appendProactiveAiMessageUnderLock(conversationId: Uuid, aiMessage: UIMessage) {
-        val session = getOrCreateSession(conversationId)
-        session.getJob()?.let { job -> if (job.isActive) job.join() }
+        private suspend fun
+ appendProactiveAiMessageUnderLock(conversationId: Uuid, aiMessage: UIMessage) {
+        
+val session = getOrCreateSession(conversationId)
+        session.getJob()?.let { job -> if (
+job.isActive) job.join() }
         session.saveMutex.withLock {
-            val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
+            val currentConversation
+ = conversationRepo.getConversationById(conversationId) ?: session.state.value
+            
+            // 明确
+给模型下达指令，这行字模型会看懂：这里是时间切割，不要延续上一段的
+剧情和时间
+            val timeGapNode = UIMessage(
+                role = MessageRole.SYSTEM, 
+                parts
+ = listOf(UIMessagePart.Text(
+                    "【系统强制时间切割】\n" +
+                    "
+当前时间戳: ${System.currentTimeMillis()}\n" +
+                    "指令: 上一段对话已经结束，此处
+为主动发送的独立消息。不要延续上一段的剧情，不要自发推演时间，请根据当下
+语境自然回复。"
+                ))
+            ).toMessageNode()
+
             val updated = currentConversation.copy(
-                messageNodes = currentConversation.messageNodes + aiMessage.toMessageNode(),
-                updateAt = Instant.now()
+                
+messageNodes = currentConversation.messageNodes + timeGapNode + aiMessage.toMessageNode(),
+                updateAt
+ = Instant.now()
             )
             updateConversation(conversationId, updated)
-            saveConversation(conversationId, updated)
+            saveConversation(conversationId, updated
+)
         }
-    }
+ }
 
     fun notifyVoiceCallDeclined(conversationId: Uuid) {
         appScope.launch(Dispatchers.IO) {
