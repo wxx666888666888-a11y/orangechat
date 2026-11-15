@@ -38,5 +38,4 @@ data class ProactiveMessageSetting(
     val aggressiveDebounceSeconds: Int = 30,
     val floatingBubbleEnabled: Boolean = false,
     val scheduledTasks: List<ScheduledTaskItem> = emptyList(),
-    val isolateProactiveContext: Boolean = true,
 )
