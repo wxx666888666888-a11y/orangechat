@@ -374,28 +374,18 @@ class ChatService(
         }
     }
 
-            private suspend fun appendProactiveAiMessageUnderLock(
+
+private suspend fun appendProactiveAiMessageUnderLock(
     conversationId: Uuid,
     aiMessage: UIMessage
 ) {
     val session = getOrCreateSession(conversationId)
-    session.getJob()?.let { job ->
-        if (job.isActive) job.join()
-    }
+    session.getJob()?.let { if (it.isActive) it.join() }
     session.saveMutex.withLock {
-        val currentConversation =
-            conversationRepo.getConversationById(conversationId)
-                ?: session.state.value
-        val gapText = buildString {
-            append("[System Event: Time gap. ")
-            append("Current time: ")
-            append(System.currentTimeMillis())
-            append(". Independent proactive message, ")
-            append("do not fast-forward time.]")
-        }
+        val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
         val gapMsg = UIMessage(
             role = MessageRole.SYSTEM,
-            parts = listOf(UIMessagePart.Text(gapText))
+            parts = listOf(UIMessagePart.Text("Time: ${System.currentTimeMillis()}"))
         )
         val newNodes = buildList {
             addAll(currentConversation.messageNodes)
@@ -409,8 +399,7 @@ class ChatService(
         updateConversation(conversationId, updated)
         saveConversation(conversationId, updated)
     }
-            }
-
+}
     fun notifyVoiceCallDeclined(conversationId: Uuid) {
         appScope.launch(Dispatchers.IO) {
             try {
