@@ -374,18 +374,27 @@ class ChatService(
         }
     }
 
-
 private suspend fun appendProactiveAiMessageUnderLock(
     conversationId: Uuid,
     aiMessage: UIMessage
 ) {
     val session = getOrCreateSession(conversationId)
-    session.getJob()?.let { if (it.isActive) it.join() }
+    if (session.getJob()?.isActive == true) {
+        return
+    }
     session.saveMutex.withLock {
         val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
+        val lastMessageTime = currentConversation.updateAt.toEpochMilli()
+        if (System.currentTimeMillis() - lastMessageTime < 15 * 60 * 1000L) {
+            return
+        }
+        val sdf = java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", java.util.Locale.CHINA).apply {
+            timeZone = java.util.TimeZone.getTimeZone("GMT+8")
+        }
+        val timeStr = sdf.format(java.util.Date())
         val gapMsg = UIMessage(
             role = MessageRole.SYSTEM,
-            parts = listOf(UIMessagePart.Text("Time: ${System.currentTimeMillis()}"))
+            parts = listOf(UIMessagePart.Text("<time_reminder>Current time: $timeStr</time_reminder>"))
         )
         val newNodes = buildList {
             addAll(currentConversation.messageNodes)
