@@ -610,33 +610,32 @@ private suspend fun appendProactiveAiMessageUnderLock(
 }
 val preservedPrefix = if (dividerIdx > 0) allCurrentMessages.subList(0, dividerIdx) else emptyList()
 val rawActiveMessages = if (dividerIdx >= 0) allCurrentMessages.subList(dividerIdx, allCurrentMessages.size) else allCurrentMessages
-val activeMessages = buildList {
-    for (msg in rawActiveMessages) {
-        val processedMsg = if (msg.role == MessageRole.ASSISTANT) {
-            var hasCookie = false
-            msg.copy(parts = msg.parts.map { part ->
-                if (part is UIMessagePart.Text) {
-                    val afterFirst = if (part.text.contains("🍪")) {
-                        part.text.substringAfter("🍪")
-                    } else {
-                        part.text
-                    }
-                    val cleanBody = afterFirst.replace("🍪", "").trimStart()
-                    if (!hasCookie) {
-                        hasCookie = true
-                        part.copy(text = "🍪$cleanBody")
-                    } else {
-                        part.copy(text = cleanBody)
-                    }
-                } else part
-            })
-        } else msg
+val activeMessages = mutableListOf<UIMessage>()
+for (msg in rawActiveMessages) {
+    val processedMsg = if (msg.role == MessageRole.ASSISTANT) {
+        var hasCookie = false
+        msg.copy(parts = msg.parts.map { part ->
+            if (part is UIMessagePart.Text) {
+                val afterFirst = if (part.text.contains("🍪")) {
+                    part.text.substringAfter("🍪")
+                } else {
+                    part.text
+                }
+                val cleanBody = afterFirst.replace("🍪", "").trimStart()
+                if (!hasCookie) {
+                    hasCookie = true
+                    part.copy(text = "🍪$cleanBody")
+                } else {
+                    part.copy(text = cleanBody)
+                }
+            } else part
+        })
+    } else msg
 
-        if (isNotEmpty() && last().role == MessageRole.ASSISTANT && processedMsg.role == MessageRole.ASSISTANT) {
-            add(UIMessage(role = MessageRole.USER, parts = listOf(UIMessagePart.Text("☆"))))
-        }
-        add(processedMsg)
+    if (activeMessages.isNotEmpty() && activeMessages.last().role == MessageRole.ASSISTANT && processedMsg.role == MessageRole.ASSISTANT) {
+        activeMessages.add(UIMessage(role = MessageRole.USER, parts = listOf(UIMessagePart.Text("☆"))))
     }
+    activeMessages.add(processedMsg)
 }
             generationHandler.generateText(
                 settings = settings,
