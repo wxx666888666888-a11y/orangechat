@@ -375,39 +375,54 @@ class ChatService(
     }
 
 private suspend fun appendProactiveAiMessageUnderLock(
-    conversationId: Uuid,
-    aiMessage: UIMessage
-) {
-    val session = getOrCreateSession(conversationId)
-    if (session.getJob()?.isActive == true) {
-        return
-    }
-    session.saveMutex.withLock {
-        val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
-        val lastMessageTime = currentConversation.updateAt.toEpochMilli()
-        if (System.currentTimeMillis() - lastMessageTime < 15 * 60 * 1000L) {
+        conversationId: Uuid,
+        aiMessage: UIMessage
+    ) {
+        val session = getOrCreateSession(conversationId)
+        if (session.getJob()?.isActive == true) {
             return
         }
-        val sdf = java.text.SimpleDateFormat("yyyy年MM月dd日 HH:mm:ss", java.util.Locale.CHINA).apply {
-            timeZone = java.util.TimeZone.getTimeZone("GMT+8")
+        session.saveMutex.withLock {
+            val currentConversation = conversationRepo.getConversationById(conversationId) ?: session.state.value
+            val lastMessageTime = currentConversation.updateAt.toEpochMilli()
+            if (System.currentTimeMillis() - lastMessageTime < 15 * 60 * 1000L) {
+                return
+            }
+
+            // 1. 截断第一个🍪之前可能漏出的思考链，保留开头唯一一个🍪，抹掉后面多余的🍪
+            val cleanedParts = aiMessage.parts.mapIndexed { index, part ->
+                if (part is UIMessagePart.Text) {
+                    val afterFirstCookie = if (part.text.contains("🍪")) {
+                        part.text.substringAfter("🍪")
+                    } else {
+                        part.text
+                    }
+                    val cleanBody = afterFirstCookie.replace("🍪", "").trimStart()
+                    val finalTxt = if (index == 0) "🍪$cleanBody" else cleanBody
+                    part.copy(text = finalTxt)
+                } else {
+                    part
+                }
+            }
+            val cleanedAiMessage = aiMessage.copy(parts = cleanedParts)
+
+            // 2. 插入你的 "☆" 消息做物理隔离
+            val gapMsg = UIMessage(
+                role = MessageRole.USER,
+                parts = listOf(UIMessagePart.Text("☆"))
+            )
+            val newNodes = buildList {
+                addAll(currentConversation.messageNodes)
+                add(gapMsg.toMessageNode())
+                add(cleanedAiMessage.toMessageNode())
+            }
+            val updated = currentConversation.copy(
+                messageNodes = newNodes,
+                updateAt = Instant.now()
+            )
+            updateConversation(conversationId, updated)
+            saveConversation(conversationId, updated)
         }
-        val timeStr = sdf.format(java.util.Date())
-        val gapMsg = UIMessage(
-            role = MessageRole.USER,
-            parts = listOf(UIMessagePart.Text("<time_reminder>Current time: $timeStr (系统主动触发时刻，请自然顺承话题主动发一条消息，严禁输出多个🍪)</time_reminder>"))
-        )
-        val newNodes = buildList {
-            addAll(currentConversation.messageNodes)
-            add(gapMsg.toMessageNode())
-            add(aiMessage.toMessageNode())
-        }
-        val updated = currentConversation.copy(
-            messageNodes = newNodes,
-            updateAt = Instant.now()
-        )
-        updateConversation(conversationId, updated)
-        saveConversation(conversationId, updated)
-    }
 }
     fun notifyVoiceCallDeclined(conversationId: Uuid) {
         appScope.launch(Dispatchers.IO) {
@@ -591,11 +606,38 @@ private suspend fun appendProactiveAiMessageUnderLock(
                 if (messageRange != null) it.subList(messageRange.start, messageRange.endInclusive + 1) else it
             }
             val dividerIdx = allCurrentMessages.indexOfLast { msg ->
-                msg.parts.any { it is UIMessagePart.Text && it.text.contains(COMPRESS_DIVIDER_TAG) }
-            }
-            val preservedPrefix = if (dividerIdx > 0) allCurrentMessages.subList(0, dividerIdx) else emptyList()
-            val activeMessages = if (dividerIdx >= 0) allCurrentMessages.subList(dividerIdx, allCurrentMessages.size) else allCurrentMessages
+    msg.parts.any { it is UIMessagePart.Text && it.text.contains(COMPRESS_DIVIDER_TAG) }
+}
+val preservedPrefix = if (dividerIdx > 0) allCurrentMessages.subList(0, dividerIdx) else emptyList()
+val rawActiveMessages = if (dividerIdx >= 0) allCurrentMessages.subList(dividerIdx, allCurrentMessages.size) else allCurrentMessages
+val activeMessages = buildList {
+    for (msg in rawActiveMessages) {
+        val processedMsg = if (msg.role == MessageRole.ASSISTANT) {
+            var hasCookie = false
+            msg.copy(parts = msg.parts.map { part ->
+                if (part is UIMessagePart.Text) {
+                    val afterFirst = if (part.text.contains("🍪")) {
+                        part.text.substringAfter("🍪")
+                    } else {
+                        part.text
+                    }
+                    val cleanBody = afterFirst.replace("🍪", "").trimStart()
+                    if (!hasCookie) {
+                        hasCookie = true
+                        part.copy(text = "🍪$cleanBody")
+                    } else {
+                        part.copy(text = cleanBody)
+                    }
+                } else part
+            })
+        } else msg
 
+        if (isNotEmpty() && last().role == MessageRole.ASSISTANT && processedMsg.role == MessageRole.ASSISTANT) {
+            add(UIMessage(role = MessageRole.USER, parts = listOf(UIMessagePart.Text("☆"))))
+        }
+        add(processedMsg)
+    }
+}
             generationHandler.generateText(
                 settings = settings,
                 model = model,
