@@ -393,8 +393,8 @@ private suspend fun appendProactiveAiMessageUnderLock(
         }
         val timeStr = sdf.format(java.util.Date())
         val gapMsg = UIMessage(
-            role = MessageRole.SYSTEM,
-            parts = listOf(UIMessagePart.Text("<time_reminder>Current time: $timeStr</time_reminder>"))
+            role = MessageRole.USER,
+            parts = listOf(UIMessagePart.Text("<time_reminder>Current time: $timeStr (系统主动触发时刻，请自然顺承话题主动发一条消息，严禁输出多个🍪)</time_reminder>"))
         )
         val newNodes = buildList {
             addAll(currentConversation.messageNodes)
